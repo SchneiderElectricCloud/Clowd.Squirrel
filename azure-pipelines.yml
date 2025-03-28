@@ -1,0 +1,82 @@
+variables:
+  - name: BuildConfiguration
+    value: Release
+  - name: BuildPlatform
+    value: "any cpu"
+
+trigger:
+  batch: 'true'
+  branches:
+    include:
+    - master
+    - develop
+    exclude:
+    - feature/*
+
+stages:
+  - stage: build
+    pool:
+      name: CustomAzure
+    displayName: Build
+    jobs:
+      - job: Build
+        workspace:
+          clean: all
+        steps:
+        - checkout: self
+          fetchDepth: 0
+
+        - task: UseDotNet@2
+          displayName: 'Use .NET 8.x'
+          inputs:
+            packageType: 'sdk'
+            version: '8.x'  
+
+        - task: NuGetToolInstaller@0
+          displayName: 'Use Nuget'
+
+        - task: NuGetCommand@2
+          displayName: 'NuGet restore'
+          inputs:
+            feedsToUse: config
+            # nugetConfigPath: '.\nuget.config'
+            # externalFeedCredentials: 'SE Product Team Packages'
+
+        - task: MSBuild@1
+          displayName: "Build Squirrel"
+          inputs:
+           platform: "$(BuildPlatform)"
+           configuration: "$(BuildConfiguration)"
+           DirectoryBuildPropsPath: "**/src/Directory.Build.Props"
+           solution: "**/Squirrel.sln"
+           msbuildArgs: '/t:Pack'
+
+        - task: PowerShell@2
+          displayName: Squirrel Tools Zip
+          inputs:
+            targetType: filePath
+            filePath: ./zipTools.ps1
+            arguments: $(build.artifactStagingDirectory)
+
+        - task: DotNetCoreCLI@2
+          displayName: Run Unit Tests
+          inputs:
+            command: test
+            projects: '**/*Test*/*.csproj'
+            arguments: '--configuration $(buildConfiguration) --collect "Code coverage"'
+
+        - template: push-nuget.yml
+          parameters:
+            ProjectName: Squirrel
+
+        - task: CopyFiles@2
+          displayName: Copy Packages to Artifact Directory
+          inputs:
+            Contents: '**\build\Release\*.nupkg'
+            TargetFolder: '$(build.artifactStagingDirectory)'
+
+        - task: PublishBuildArtifacts@1
+          displayName: Publish Package Artifacts
+          inputs:
+            pathToPublish: '$(build.artifactStagingDirectory)'
+            artifactName: Packages
