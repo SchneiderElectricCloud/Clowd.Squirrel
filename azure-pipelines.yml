@@ -1,0 +1,78 @@
+pool:
+  vmImage: windows-2022
+  demands:
+  - MSBuild
+
+  variables:
+  - group: YamlDeploymentTask-VisualStudioMarketplace
+  - name: BuildConfiguration
+    value: Release
+  - name: BuildPlatform
+    value: 'any cpu'
+  - name: coreSolution
+    value: 'src\Squirrel.sln'
+
+trigger:
+  batch: 'true'
+  branches:
+    include:
+    - master
+    - develop
+    exclude:
+    - feature/*
+pr: none
+
+steps:
+- task: UseDotNet@2
+  displayName: 'Use .NET 8.x'
+  inputs:
+    packageType: 'sdk'
+    version: '8.x'  
+
+- task: NuGetToolInstaller@1
+  displayName: 'Install Nuget'
+  inputs:
+    versionSpec: '6.8.0'
+
+- task: DotNetCoreCLI@2  
+  inputs:
+    command: custom
+    custom: tool
+    arguments: install --tool-path . nbgv
+  displayName: Install NBGV tool
+  
+- script: nbgv cloud
+  displayName: Set Version
+
+- task: VSBuild@1
+  displayName: Nuget Restore
+  inputs:
+    solution: '$(coreSolution)'
+    msbuildArgs: '/t:Restore'
+    configuration: '$(buildConfiguration)'
+
+- task: VSBuild@1
+  displayName: Build & Pack Core Solution
+  inputs:
+    solution: '$(coreSolution)'
+    configuration: '$(buildConfiguration)'
+    platform: '$(buildPlatform)'
+
+- task: DotNetCoreCLI@2
+  displayName: Run Unit Tests
+  inputs:
+    command: test
+    projects: '**/*Test*/*.csproj'
+    arguments: '--configuration $(buildConfiguration) --collect "Code coverage"'
+
+- task: CopyFiles@2
+  displayName: Copy Packages to Artifact Directory
+  inputs:
+    Contents: 'packages\*.nupkg'
+    TargetFolder: '$(build.artifactStagingDirectory)'
+
+- task: PublishBuildArtifacts@1
+  displayName: Publish Package Artifacts
+  inputs:
+    pathToPublish: '$(build.artifactStagingDirectory)'
+    artifactName: Packages
