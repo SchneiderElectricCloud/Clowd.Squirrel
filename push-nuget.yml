@@ -1,0 +1,85 @@
+# Push Nuget Task Group
+parameters:
+  - name: ProjectName
+    type: string
+  
+
+steps:
+
+  - task: NuGetAuthenticate@1
+
+  - pwsh: |
+      Write-Host "--- Check for nuget push ---"
+      $location = [string](Get-Location)
+      Write-Host "Script executing in: $location"
+      Write-Host "Processing: $env:ProjectName"
+      Write-Host ("##vso[task.setvariable variable=PushNugetDevOps;]false")
+
+      $project = $env:ProjectName
+      $projFile = "$location\src\$project\$project.csproj"
+
+      $branch = $env:BUILD_SOURCEBRANCHNAME
+      if([string]::IsNullOrEmpty($branch))
+      {
+          Write-Host "Warning: Could not find branch.'BUILD_SOURCEBRANCHNAME' "
+          return
+      }
+
+      Write-Host "Branch: $branch"
+      if($branch -ne 'develop' -AND $branch -ne 'master' -AND $branch -ne 'main')
+      {
+         $hotfix = $env:BUILD_SOURCEBRANCH
+         Write-Host "Full Branch: $hotfix"
+         if($hotfix -like "*hotfix*"){
+            $branch="hotfix"
+            Write-Host "HOTFIX BRANCH"
+         }
+         else{
+      
+          Write-Host "Warning: Can only push packages from master main or develop"
+          return
+          }
+      }
+
+      Write-Host "Opening: $projFile"
+      [xml]$csprojfile = Get-Content $projFile -ErrorAction Stop
+      $ProjectVersion = ($csprojfile.Project.PropertyGroup.Version)
+      Write-Host "ProjectVersion: $ProjectVersion"
+
+      $betaTag = $ProjectVersion | Select-String -Pattern "-beta"
+
+      Write-Host "BetaTag : $betaTag"
+
+      if($branch -eq 'develop' -AND $null -eq $betaTag)
+      {
+          #Abort the build
+          Write-Host "No beta tag. No package will be pushed."
+          return
+      }
+      if($branch -ne 'develop' -AND $betaTag )
+      {
+          #Abort the build
+          Write-Host "Beta tag. Can Not Push Beta packages from master."
+          return
+      }
+
+      Write-Host "Attempting package push."
+      Write-Host ("##vso[task.setvariable variable=PushNugetDevOps;]true")
+    failOnStderr: false
+    errorActionPreference: continue
+    displayName: "Check nuget version ${{ parameters.ProjectName }}"
+    continueOnError: true
+    timeoutInMinutes: 1    
+    env:
+      ProjectName: ${{ parameters.ProjectName }}  
+
+  - task: NuGetCommand@2
+    displayName: "Update package ${{ parameters.ProjectName }}"
+    inputs:
+      command: 'push'
+      packagesToPush: 'build/Release/*${{ parameters.ProjectName }}*.nupkg;!src/${{ parameters.ProjectName }}/**/*${{ parameters.ProjectName }}*.symbols.nupkg'
+      nuGetFeedType: 'internal'
+      publishVstsFeed: 'c62a99c1-571b-489e-96fa-9fee9b8cc25e'
+      allowPackageConflicts: true
+    condition: and(succeeded(), eq(variables.PushNugetDevOps, 'true'))
+    continueOnError: true

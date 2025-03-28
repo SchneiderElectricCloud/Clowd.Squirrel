@@ -16,8 +16,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionLevel", "SolutionLe
 		.github\workflows\build.yml = .github\workflows\build.yml
 		src\Directory.Build.props = src\Directory.Build.props
 		Squirrel.entitlements = Squirrel.entitlements
+		azure-pipelines.yml = azure-pipelines.yml
+		src\Clowd.Squirrel.nuspec = src\Clowd.Squirrel.nuspec
+		src\Directory.Build.props = src\Directory.Build.props
+		push-nuget.yml = push-nuget.yml
 		vendor\wix\template.wxs = vendor\wix\template.wxs
 		version.json = version.json
+		zipTools.ps1 = zipTools.ps1
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Setup", "src\Setup\Setup.vcxproj", "{6B406985-B2E1-4FED-A405-BD0694D68E93}"
@@ -37,6 +42,7 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Squirrel.CommandLine.Tests", "test\Squirrel.CommandLine.Tests\Squirrel.CommandLine.Tests.csproj", "{519EAB50-47B8-425F-8B20-AB9548F220B4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{7AC3A776-B582-4B65-9D03-BD52332B5CA3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Squirrel.Shared", "src\Squirrel.Shared\Squirrel.Shared.csproj", "{352C15EA-622F-4132-80D8-9B6E3C83404E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

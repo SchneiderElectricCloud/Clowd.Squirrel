@@ -4,6 +4,7 @@
   <PropertyGroup>
     <TargetFrameworks>net462;net48;netstandard2.0;net5.0;net6.0</TargetFrameworks>
     <AssemblyName>Squirrel.Core</AssemblyName>
+    <TargetFrameworks>net46;net461;net462;net48;netstandard2.0;net5.0;net6.0;net8.0</TargetFrameworks>
     <Description>Squirrel</Description>
     <Title>Squirrel</Title>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -14,6 +15,12 @@
     <PackageIcon>Clowd_200.png</PackageIcon>
     <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=./</PathMap>
+    <PackageId>SE.Squirrel</PackageId>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>3.0.0-beta.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

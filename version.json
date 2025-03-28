@@ -1,8 +1,13 @@
 {
-  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/master/src/NerdBank.GitVersioning/version.schema.json",
-  "version": "3.0",
-  "gitCommitIdShortFixedLength": 7,
+  "version": "3.0.0-beta.1",
   "publicReleaseRefSpec": [
-    "^refs/heads/master$"
-  ]
+    "^refs/heads/main$",
+    "^refs/heads/release/\\d+\\.\\d+$",
+    "^refs/heads/hotfix/Net8update$"
+  ],
+  "cloudBuild": {
+    "buildNumber": {
+      "enabled": false
+    }
+  }
 }
