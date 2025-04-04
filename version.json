@@ -1,7 +1,8 @@
 {
-  "version": "3.0.0-beta.1",
+  "version": "3.0.0",
   "publicReleaseRefSpec": [
     "^refs/heads/main$",
+    "^refs/heads/develop$",
     "^refs/heads/release/\\d+\\.\\d+$",
     "^refs/heads/hotfix/Net8update$"
   ],
