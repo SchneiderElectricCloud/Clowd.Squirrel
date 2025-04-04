@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31815.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Squirrel", "src\Squirrel\Squirrel.csproj", "{1436E22A-FE3C-4D68-9A85-9E74DF2E6A92}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Squirrel.Tests", "test\Squirrel.Tests\Squirrel.Tests.csproj", "{98AEB048-E27D-42F4-9440-505B7F78BAFD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Squirrel.Tests", "test\Squirrel.Tests.csproj", "{98AEB048-E27D-42F4-9440-505B7F78BAFD}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionLevel", "SolutionLevel", "{ED657D2C-F8A0-4012-A64F-7367D41BE4D2}"
 	ProjectSection(SolutionItems) = preProject
@@ -25,8 +25,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Setup", "src\Setup\Setup.vcxproj", "{6B406985-B2E1-4FED-A405-BD0694D68E93}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StubExecutable", "src\StubExecutable\StubExecutable.vcxproj", "{C028DB2A-E7C5-4232-8C22-D5FBA2176136}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Squirrel.CommandLine.Tests", "test\Squirrel.CommandLine.Tests\Squirrel.CommandLine.Tests.csproj", "{519EAB50-47B8-425F-8B20-AB9548F220B4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{7AC3A776-B582-4B65-9D03-BD52332B5CA3}"
 EndProject
