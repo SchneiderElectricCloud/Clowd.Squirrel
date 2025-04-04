@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.Versioning;
-using NuGet.Versioning;
 using Squirrel.SimpleSplat;
 
 namespace Squirrel
@@ -26,6 +23,9 @@ namespace Squirrel
     /// SquirrelAwareApp helps you to handle Squirrel app activation events
     /// correctly.
     /// </summary>
+#if NET5_0_OR_GREATER
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     public static class SquirrelAwareApp
     {
         /// <summary>
@@ -33,7 +33,7 @@ namespace Squirrel
         /// will dispatch to your methods to set up your app. Depending on the
         /// parameter, your app will exit after this method is called, which 
         /// is required by Squirrel. UpdateManager has methods to help you to
-        /// do common functions, such as <see cref="IAppTools.CreateShortcutsForExecutable"/>.
+        /// do this, such as CreateShortcutForThisExe.
         /// </summary>
         /// <param name="onInitialInstall">Called when your app is initially
         /// installed. Set up app shortcuts here as well as file associations.
@@ -48,7 +48,7 @@ namespace Squirrel
         /// in onInitialInstall.</param>
         /// <param name="onEveryRun">Called when your application is run normally,
         /// also indicates whether this is first time your app is run, so you can
-        /// show a welcome screen.
+        /// show a welcome screen. Also see <see cref="IAppTools.SetProcessAppUserModelId"/>
         /// which can be executed here.</param>
         /// <param name="arguments">Use in a unit-test runner to mock the 
         /// arguments. In your app, leave this as null.</param>
@@ -81,35 +81,13 @@ namespace Squirrel
 
             // in the fastExitLookup arguments, we run the squirrel hook and then exit the process
             if (args.Length >= 2 && fastExitlookup.ContainsKey(args[0])) {
-                var version = NuGetVersion.Parse(args[1]);
+                var version = new SemanticVersion(args[1]);
                 try {
                     fastExitlookup[args[0]](version, um);
                     if (!ModeDetector.InUnitTestRunner()) Environment.Exit(0);
                 } catch (Exception ex) {
                     LogHost.Default.ErrorException("Failed to handle Squirrel events", ex);
                     if (!ModeDetector.InUnitTestRunner()) Environment.Exit(-1);
-                }
-            }
-            
-            // now check if there are any pending updates to be applied (and we have not already been restarted)
-            if (!args.Contains("--squirrel-restarted") && um.Config.CurrentlyInstalledVersion != null) {
-                var versions = um.Config.GetVersions();
-                var executing = versions.FirstOrDefault(v => v.IsExecuting);
-                var latest = versions.OrderByDescending(v => v.Version).FirstOrDefault();
-                if (executing != null && executing != latest) {
-                    // there is a local update available, so if there are no other processes running we should restart
-                    var myPid = Process.GetCurrentProcess().Id;
-                    var isOtherProcessRunning = PlatformUtil
-                        .GetRunningProcessesInDirectory(um.Config.RootAppDir)
-                        .Any(x => x.ProcessId != myPid);
-
-                    if (isOtherProcessRunning) {
-                        LogHost.Default.Info("There is a local update available, but there are other processes are running so it will not be applied.");
-                    } else {
-                        LogHost.Default.Info("There is a local update available, app will restart now to apply it.");
-                        um.Config.StartRestartingProcess(arguments: "--squirrel-restarted");
-                        Environment.Exit(0);
-                    }
                 }
             }
 

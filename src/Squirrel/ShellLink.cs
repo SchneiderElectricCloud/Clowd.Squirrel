@@ -2,7 +2,6 @@
 
 using System;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Text;
 
 // All of this code is from http://vbaccelerator.com/home/NET/Code/Libraries/Shell_Projects/Creating_and_Modifying_Shortcuts/article.asp
@@ -12,7 +11,9 @@ namespace Squirrel.Shell
     /// <summary>
     /// Summary description for ShellLink.
     /// </summary>
-    [SupportedOSPlatform("windows")]
+#if NET5_0_OR_GREATER
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     public class ShellLink : IDisposable
     {
         [ComImport()]
@@ -932,7 +933,9 @@ namespace Squirrel.Shell
     /// Enables extraction of icons for any file type from
     /// the Shell.
     /// </summary>
-    [SupportedOSPlatform("windows")]
+#if NET5_0_OR_GREATER
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     public class FileIcon
     {
         const int MAX_PATH = 260;

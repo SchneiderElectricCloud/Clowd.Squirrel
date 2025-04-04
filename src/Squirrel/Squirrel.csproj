@@ -2,19 +2,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net462;net48;netstandard2.0;net5.0;net6.0</TargetFrameworks>
-    <AssemblyName>Squirrel.Core</AssemblyName>
     <TargetFrameworks>net46;net461;net462;net48;netstandard2.0;net5.0;net6.0;net8.0</TargetFrameworks>
     <Description>Squirrel</Description>
     <Title>Squirrel</Title>
+    <AssemblyName>SquirrelLib</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>Clowd.Squirrel</PackageId>
-    <Title>Squirrel Updater</Title>
-    <Description>Quick and easy installer and automatic updates for desktop applications</Description>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageIcon>Clowd_200.png</PackageIcon>
-    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
-    <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <DebugType>embedded</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=./</PathMap>
@@ -22,10 +14,6 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Version>3.0.0-beta.1</Version>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="NuGet.Versioning" Version="6.7.0" />
-  </ItemGroup>
 
   <ItemGroup Condition=" $(TargetFramework) == 'netstandard2.0' OR $(TargetFramework) == 'net5.0' ">
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
@@ -36,10 +24,6 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\..\docs\artwork\Clowd_200.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

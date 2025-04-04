@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
-using NuGet.Versioning;
 
 namespace Squirrel.NuGet
 {
@@ -23,25 +22,25 @@ namespace Squirrel.NuGet
 
         public static void ThrowIfInvalidNugetId(string id)
         {
-            if (!IsValidNuGetId(id))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(id, @"^[\w\.-]*$"))
                 throw new ArgumentException($"Invalid package Id '{id}', it must contain only alphanumeric characters, underscores, dashes, and dots.");
         }
 
-        public static bool IsValidNuGetId(string id)
-            => System.Text.RegularExpressions.Regex.IsMatch(id, @"^[\w\.-]*$");
-
         public static void ThrowIfVersionNotSemverCompliant(string version)
         {
-            if (SemanticVersion.TryParse(version, out var parsed)) {
-                if (parsed < new SemanticVersion(0, 0, 1)) {
+            if (SemanticVersion.TryParseStrict(version, out var parsed)) {
+                if (parsed < new SemanticVersion(0, 0, 1, 0)) {
                     throw new Exception($"Invalid package version '{version}', it must be >= 0.0.1.");
                 }
             } else {
-                throw new Exception($"Invalid package version '{version}', it must be a 3-part SemVer2 compliant version string.");
+                throw new Exception($"Invalid package version '{version}', it must be a 3-part SemVer compliant version string.");
             }
         }
 
-        public static string SafeTrim(this string value) => value?.Trim();
+        public static string SafeTrim(this string value)
+        {
+            return value == null ? null : value.Trim();
+        }
 
         public static string GetOptionalAttributeValue(this XElement element, string localName, string namespaceName = null)
         {

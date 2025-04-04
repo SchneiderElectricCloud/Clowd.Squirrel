@@ -1,46 +1,27 @@
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using Squirrel.NuGet;
 using Squirrel.SimpleSplat;
+using System.Text;
+using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Net;
 
 namespace Squirrel
 {
     internal static class Utility
     {
-        /// <summary>
-        /// Calculates the total percentage of a specific step that should report within a specific range.
-        /// <para />
-        /// If a step needs to report between 50 -> 75 %, this method should be used as CalculateProgress(percentage, 50, 75). 
-        /// </summary>
-        /// <param name="percentageOfCurrentStep">The percentage of the current step, a value between 0 and 100.</param>
-        /// <param name="stepStartPercentage">The start percentage of the range the current step represents.</param>
-        /// <param name="stepEndPercentage">The end percentage of the range the current step represents.</param>
-        /// <returns>The calculated percentage that can be reported about the total progress.</returns>
-        public static int CalculateProgress(int percentageOfCurrentStep, int stepStartPercentage, int stepEndPercentage)
-        {
-            // Ensure we are between 0 and 100
-            percentageOfCurrentStep = Math.Max(Math.Min(percentageOfCurrentStep, 100), 0);
-
-            var range = stepEndPercentage - stepStartPercentage;
-            var singleValue = range / 100d;
-            var totalPercentage = (singleValue * percentageOfCurrentStep) + stepStartPercentage;
-
-            return (int) totalPercentage;
-        }
-
         public static string RemoveByteOrderMarkerIfPresent(string content)
         {
-            return string.IsNullOrEmpty(content)
-                ? string.Empty
-                : RemoveByteOrderMarkerIfPresent(Encoding.UTF8.GetBytes(content));
+            return string.IsNullOrEmpty(content) ?
+                string.Empty : RemoveByteOrderMarkerIfPresent(Encoding.UTF8.GetBytes(content));
         }
 
         public static string RemoveByteOrderMarkerIfPresent(byte[] content)
@@ -92,35 +73,7 @@ namespace Squirrel
             if (success) {
                 retVal = (TEnum) Enum.ToObject(typeof(TEnum), enumValue);
             }
-
             return success;
-        }
-
-        public static bool FullPathEquals(string path1, string path2)
-        {
-            return NormalizePath(path1).Equals(NormalizePath(path2), SquirrelRuntimeInfo.PathStringComparison);
-        }
-
-        public static bool PathPartEquals(string part1, string part2)
-        {
-            return part1.Equals(part2, SquirrelRuntimeInfo.PathStringComparison);
-        }
-
-        public static bool PathPartStartsWith(string part1, string startsWith)
-        {
-            return part1.StartsWith(startsWith, SquirrelRuntimeInfo.PathStringComparison);
-        }
-
-        public static bool PathPartEndsWith(string part1, string endsWith)
-        {
-            return part1.EndsWith(endsWith, SquirrelRuntimeInfo.PathStringComparison);
-        }
-
-        public static bool FileHasExtension(string filePath, string extension)
-        {
-            var ext = Path.GetExtension(filePath);
-            if (!extension.StartsWith(".")) extension = "." + extension;
-            return PathPartEquals(ext, extension);
         }
 
         public static string NormalizePath(string path)
@@ -134,7 +87,7 @@ namespace Squirrel
         {
             var normalizedDir = NormalizePath(directory) + Path.DirectorySeparatorChar;
             var normalizedFile = NormalizePath(file);
-            return normalizedFile.StartsWith(normalizedDir, SquirrelRuntimeInfo.PathStringComparison);
+            return normalizedFile.StartsWith(normalizedDir, StringComparison.OrdinalIgnoreCase);
         }
 
         public static IEnumerable<FileInfo> GetAllFilesRecursively(this DirectoryInfo rootPath)
@@ -192,10 +145,14 @@ namespace Squirrel
 
         public static void Retry(this Action block, int retries = 4, int retryDelay = 250)
         {
-            Retry(() => {
+            Contract.Requires(retries > 0);
+
+            Func<object> thunk = () => {
                 block();
-                return true;
-            }, retries, retryDelay);
+                return null;
+            };
+
+            thunk.Retry(retries, retryDelay);
         }
 
         public static T Retry<T>(this Func<T> block, int retries = 4, int retryDelay = 250)
@@ -206,21 +163,27 @@ namespace Squirrel
                 try {
                     T ret = block();
                     return ret;
-                } catch (Exception ex) {
-                    if (retries == 0) throw;
-                    Log().Warn($"Operation failed ({ex.Message}). Retrying {retries} more times...");
+                } catch (Exception) {
+                    if (retries == 0) {
+                        throw;
+                    }
+
                     retries--;
                     Thread.Sleep(retryDelay);
                 }
             }
         }
 
-        public static Task RetryAsync(this Func<Task> block, int retries = 4, int retryDelay = 250)
+        public static async Task RetryAsync(this Func<Task> block, int retries = 4, int retryDelay = 250)
         {
-            return RetryAsync(async () => {
-                await block().ConfigureAwait(false);
-                return true;
-            }, retries, retryDelay);
+            while (true) {
+                try {
+                    await block().ConfigureAwait(false);
+                } catch {
+                    if (retries-- == 0) throw;
+                    await Task.Delay(retryDelay).ConfigureAwait(false);
+                }
+            }
         }
 
         public static async Task<T> RetryAsync<T>(this Func<Task<T>> block, int retries = 4, int retryDelay = 250)
@@ -228,23 +191,157 @@ namespace Squirrel
             while (true) {
                 try {
                     return await block().ConfigureAwait(false);
-                } catch (Exception ex) {
-                    if (retries == 0) throw;
-                    Log().Warn($"Operation failed ({ex.Message}). Retrying {retries} more times...");
-                    retries--;
+                } catch {
+                    if (retries-- == 0) throw;
                     await Task.Delay(retryDelay).ConfigureAwait(false);
                 }
             }
         }
 
-        public static T GetAwaiterResult<T>(this Task<T> task)
+        /*
+         * caesay — 09/12/2021 at 12:10 PM
+         * yeah
+         * can I steal this for squirrel? 
+         * Roman — 09/12/2021 at 12:10 PM
+         * sure :)
+         * reference CommandRunner.cs on the github url as source? :)
+         * https://github.com/RT-Projects/RT.Util/blob/ef660cd693f66bc946da3aaa368893b03b74eed7/RT.Util.Core/CommandRunner.cs#L327
+         */
+
+        /// <summary>
+        ///     Given a number of argument strings, constructs a single command line string with all the arguments escaped
+        ///     correctly so that a process using standard Windows API for parsing the command line will receive exactly the
+        ///     strings passed in here. See Remarks.</summary>
+        /// <remarks>
+        ///     The string is only valid for passing directly to a process. If the target process is invoked by passing the
+        ///     process name + arguments to cmd.exe then further escaping is required, to counteract cmd.exe's interpretation
+        ///     of additional special characters. See <see cref="EscapeCmdExeMetachars"/>.</remarks>
+        public static string ArgsToCommandLine(IEnumerable<string> args)
         {
-            return task.ConfigureAwait(false).GetAwaiter().GetResult();
+            var sb = new StringBuilder();
+            foreach (var arg in args) {
+                if (arg == null)
+                    continue;
+                if (sb.Length != 0)
+                    sb.Append(' ');
+                // For details, see https://web.archive.org/web/20150318010344/http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
+                // or https://devblogs.microsoft.com/oldnewthing/?p=12833
+                if (arg.Length != 0 && arg.IndexOfAny(_cmdChars) < 0)
+                    sb.Append(arg);
+                else {
+                    sb.Append('"');
+                    for (int c = 0; c < arg.Length; c++) {
+                        int backslashes = 0;
+                        while (c < arg.Length && arg[c] == '\\') {
+                            c++;
+                            backslashes++;
+                        }
+                        if (c == arg.Length) {
+                            sb.Append('\\', backslashes * 2);
+                            break;
+                        } else if (arg[c] == '"') {
+                            sb.Append('\\', backslashes * 2 + 1);
+                            sb.Append('"');
+                        } else {
+                            sb.Append('\\', backslashes);
+                            sb.Append(arg[c]);
+                        }
+                    }
+                    sb.Append('"');
+                }
+            }
+            return sb.ToString();
+        }
+        private static readonly char[] _cmdChars = new[] { ' ', '"', '\n', '\t', '\v' };
+
+        /// <summary>
+        ///     Escapes all cmd.exe meta-characters by prefixing them with a ^. See <see cref="ArgsToCommandLine"/> for more
+        ///     information.</summary>
+        public static string EscapeCmdExeMetachars(string command)
+        {
+            var result = new StringBuilder();
+            foreach (var ch in command) {
+                switch (ch) {
+                case '(':
+                case ')':
+                case '%':
+                case '!':
+                case '^':
+                case '"':
+                case '<':
+                case '>':
+                case '&':
+                case '|':
+                    result.Append('^');
+                    break;
+                }
+                result.Append(ch);
+            }
+            return result.ToString();
         }
 
-        public static void GetAwaiterResult(this Task task)
+        public class ProcessResult
         {
-            task.ConfigureAwait(false).GetAwaiter().GetResult();
+            public int ExitCode { get; set; }
+            public string StdOutput { get; set; }
+
+            public ProcessResult(int exitCode, string stdOutput)
+            {
+                ExitCode = exitCode;
+                StdOutput = stdOutput;
+            }
+        }
+
+        /// <summary>
+        /// This function will escape command line arguments such that CommandLineToArgvW is guarenteed to produce the same output as the 'args' parameter. 
+        /// It also will automatically execute wine if trying to run an exe while not on windows.
+        /// </summary>
+        public static Task<ProcessResult> InvokeProcessAsync(string fileName, IEnumerable<string> args, CancellationToken ct, string workingDirectory = "")
+        {
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT && fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) {
+                return InvokeProcessUnsafeAsync(CreateProcessStartInfo("wine", ArgsToCommandLine(new string[] { fileName }.Concat(args)), workingDirectory), ct);
+            } else {
+                return InvokeProcessUnsafeAsync(CreateProcessStartInfo(fileName, ArgsToCommandLine(args), workingDirectory), ct);
+            }
+        }
+
+        public static ProcessStartInfo CreateProcessStartInfo(string fileName, string arguments, string workingDirectory = "")
+        {
+            var psi = new ProcessStartInfo(fileName, arguments);
+            psi.UseShellExecute = false;
+            psi.WindowStyle = ProcessWindowStyle.Hidden;
+            psi.ErrorDialog = false;
+            psi.CreateNoWindow = true;
+            psi.RedirectStandardOutput = true;
+            psi.RedirectStandardError = true;
+            psi.WorkingDirectory = workingDirectory;
+            return psi;
+        }
+
+        public static async Task<ProcessResult> InvokeProcessUnsafeAsync(ProcessStartInfo psi, CancellationToken ct)
+        {
+            var pi = Process.Start(psi);
+            await Task.Run(() => {
+                while (!ct.IsCancellationRequested) {
+                    if (pi.WaitForExit(2000)) return;
+                }
+
+                if (ct.IsCancellationRequested) {
+                    pi.Kill();
+                    ct.ThrowIfCancellationRequested();
+                }
+            }).ConfigureAwait(false);
+
+            string textResult = await pi.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+            if (String.IsNullOrWhiteSpace(textResult) || pi.ExitCode != 0) {
+                textResult = (textResult ?? "") + "\n" + await pi.StandardError.ReadToEndAsync().ConfigureAwait(false);
+
+                if (String.IsNullOrWhiteSpace(textResult)) {
+                    textResult = String.Empty;
+                }
+            }
+
+            return new ProcessResult(pi.ExitCode, textResult.Trim());
         }
 
         public static Task ForEachAsync<T>(this IEnumerable<T> source, Action<T> body, int degreeOfParallelism = 4)
@@ -263,90 +360,100 @@ namespace Squirrel
                 }));
         }
 
-        public static string GetDefaultTempBaseDirectory()
-        {
-            string tempDir;
+        static Lazy<string> directoryChars = new Lazy<string>(() => {
+            return "abcdefghijklmnopqrstuvwxyz" +
+                Enumerable.Range(0x03B0, 0x03FF - 0x03B0)   // Greek and Coptic
+                    .Concat(Enumerable.Range(0x0400, 0x04FF - 0x0400)) // Cyrillic
+                    .Aggregate(new StringBuilder(), (acc, x) => { acc.Append(Char.ConvertFromUtf32(x)); return acc; })
+                    .ToString();
+        });
 
-            if (SquirrelRuntimeInfo.IsOSX) {
-                tempDir = "/tmp/clowd.squirrel";
-            } else if (SquirrelRuntimeInfo.IsWindows) {
-                tempDir = Path.Combine(Path.GetTempPath(), "Clowd.Squirrel");
-            } else {
-                throw new NotSupportedException();
+        internal static string tempNameForIndex(int index, string prefix)
+        {
+            if (index < directoryChars.Value.Length) {
+                return prefix + directoryChars.Value[index];
             }
 
-            if (Environment.GetEnvironmentVariable("CLOWD_SQUIRREL_TEMP") is var squirrlTmp
-                && !string.IsNullOrWhiteSpace(squirrlTmp))
-                tempDir = squirrlTmp;
+            return prefix + directoryChars.Value[index % directoryChars.Value.Length] + tempNameForIndex(index / directoryChars.Value.Length, "");
+        }
+
+        public static DirectoryInfo GetTempDirectory(string localAppDirectory)
+        {
+#if DEBUG
+            const string TEMP_ENV_VAR = "CLOWD_SQUIRREL_TEMP_DEBUG";
+            const string TEMP_DIR_NAME = "SquirrelClowdTempDebug";
+#else
+            const string TEMP_ENV_VAR = "CLOWD_SQUIRREL_TEMP";
+            const string TEMP_DIR_NAME = "SquirrelClowdTemp";
+#endif
+
+            var tempDir = Environment.GetEnvironmentVariable(TEMP_ENV_VAR);
+            tempDir = tempDir ?? Path.Combine(localAppDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), TEMP_DIR_NAME);
 
             var di = new DirectoryInfo(tempDir);
             if (!di.Exists) di.Create();
 
-            return di.FullName;
+            return di;
         }
 
-        private static string GetNextTempName(string tempDir)
+        public static IDisposable WithTempDirectory(out string path, string localAppDirectory = null)
         {
-            for (int i = 1; i < 10000; i++) {
-                string name = "temp." + i;
-                var target = Path.Combine(tempDir, name);
+            var di = GetTempDirectory(localAppDirectory);
+            var tempDir = default(DirectoryInfo);
 
-                FileSystemInfo info = null;
-                if (Directory.Exists(target)) info = new DirectoryInfo(target);
-                else if (File.Exists(target)) info = new FileInfo(target);
+            var names = Enumerable.Range(0, 1 << 20).Select(x => tempNameForIndex(x, "temp"));
 
-                // this dir/file does not exist, lets use it.
-                if (info == null) {
-                    return target;
-                }
+            IDisposable folderMutex = null;
 
-                // this dir/file exists, but it is old, let's re-use it.
-                // this shouldn't generally happen, but crashes do exist.
-                if (DateTime.UtcNow - info.LastWriteTimeUtc > TimeSpan.FromDays(1)) {
-                    if (DeleteFileOrDirectoryHard(target, false, true)) {
-                        // the dir/file was deleted successfully.
-                        return target;
+            foreach (var name in names) {
+                var target = Path.Combine(di.FullName, name);
+
+                if (!File.Exists(target) && !Directory.Exists(target)) {
+                    Directory.CreateDirectory(target);
+                    tempDir = new DirectoryInfo(target);
+
+                    // Directory.CreateDirectory will work even if the directory already exists. If two instances of 
+                    // Squirrel attempt to create the same temp directory at the same time, they can end up reading
+                    // and writing on top of each other. So, here we create a new file of the same name as the temp
+                    // folder we've selected and attempt to open it exclusively. This will act like a mutex as only
+                    // one Squirrel instance will be able to open this file. 
+
+                    try {
+                        folderMutex = File.Create(tempDir.FullName + "_lock", 1, FileOptions.DeleteOnClose);
+                        break;
+                    } catch (IOException ex) {
+                        Log().WarnException($"Selected temp folder '{tempDir.FullName}' but unable to open file mutex.", ex);
                     }
                 }
             }
 
-            throw new Exception(
-                "Unable to find free temp path. Has the temp directory exceeded it's maximum number of items? (10000)");
+            path = tempDir.FullName;
+
+            return Disposable.Create(() => {
+                folderMutex?.Dispose();
+                DeleteFileOrDirectoryHardOrGiveUp(tempDir.FullName);
+            });
         }
 
-        public static IDisposable GetTempDirectory(out string newTempDirectory)
+        public static IDisposable WithTempFile(out string path, string localAppDirectory = null)
         {
-            return GetTempDirectory(out newTempDirectory, GetDefaultTempBaseDirectory());
+            var di = GetTempDirectory(localAppDirectory);
+            var names = Enumerable.Range(0, 1 << 20).Select(x => tempNameForIndex(x, "tempfile"));
+
+            path = "";
+            foreach (var name in names) {
+                path = Path.Combine(di.FullName, name);
+
+                if (!File.Exists(path) && !Directory.Exists(path)) {
+                    break;
+                }
+            }
+
+            var thePath = path;
+            return Disposable.Create(() => File.Delete(thePath));
         }
 
-        public static IDisposable GetTempDirectory(out string newTempDirectory, string rootTempDir)
-        {
-            var disp = GetTempFileName(out newTempDirectory, rootTempDir);
-            Directory.CreateDirectory(newTempDirectory);
-            return disp;
-        }
-
-        public static IDisposable GetTempFileName(out string newTempFile)
-        {
-            return GetTempFileName(out newTempFile, GetDefaultTempBaseDirectory());
-        }
-
-        public static IDisposable GetTempFileName(out string newTempFile, string rootTempDir)
-        {
-            var path = GetNextTempName(rootTempDir);
-            newTempFile = path;
-            return Disposable.Create(() => DeleteFileOrDirectoryHard(path, throwOnFailure: false));
-        }
-
-        /// <summary>
-        /// Repeatedly tries various methods to delete a file system object. Optionally renames the directory first.
-        /// Optionally ignores errors.
-        /// </summary>
-        /// <param name="path">The path of the file system entity to delete.</param>
-        /// <param name="throwOnFailure">Whether this function should throw if the delete fails.</param>
-        /// <param name="renameFirst">Try to rename this object first before deleting. Can help prevent partial delete of folders.</param>
-        /// <returns>True if the file system object was deleted, false otherwise.</returns>
-        public static bool DeleteFileOrDirectoryHard(string path, bool throwOnFailure = true, bool renameFirst = false)
+        public static void DeleteFileOrDirectoryHard(string path, bool throwOnFailure = true)
         {
             Contract.Requires(!String.IsNullOrEmpty(path));
             Log().Debug("Starting to delete: {0}", path);
@@ -355,27 +462,19 @@ namespace Squirrel
                 if (File.Exists(path)) {
                     DeleteFsiVeryHard(new FileInfo(path));
                 } else if (Directory.Exists(path)) {
-                    if (renameFirst) {
-                        // if there are locked files in a directory, we will not attempt to delte it
-                        var oldPath = path + ".old";
-                        Directory.Move(path, oldPath);
-                        path = oldPath;
-                    }
-
                     DeleteFsiTree(new DirectoryInfo(path));
                 } else {
                     if (throwOnFailure)
                         Log().Warn($"Cannot delete '{path}' if it does not exist.");
                 }
-
-                return true;
             } catch (Exception ex) {
                 Log().ErrorException($"Unable to delete '{path}'", ex);
                 if (throwOnFailure)
                     throw;
-                return false;
             }
         }
+
+        public static void DeleteFileOrDirectoryHardOrGiveUp(string path) => DeleteFileOrDirectoryHard(path, false);
 
         private static void DeleteFsiTree(FileSystemInfo fileSystemInfo)
         {
@@ -405,18 +504,17 @@ namespace Squirrel
         private static void DeleteFsiVeryHard(FileSystemInfo fileSystemInfo)
         {
             // don't try to delete the running process
-            if (FullPathEquals(fileSystemInfo.FullName, SquirrelRuntimeInfo.EntryExePath))
+            if (fileSystemInfo.FullName.Equals(SquirrelRuntimeInfo.EntryExePath, StringComparison.InvariantCultureIgnoreCase))
                 return;
 
             // try to remove "ReadOnly" attributes
             try { fileSystemInfo.Attributes = FileAttributes.Normal; } catch { }
-
             try { fileSystemInfo.Refresh(); } catch { }
 
             // use this instead of fsi.Delete() because it is more resilient/aggressive
             Action deleteMe = fileSystemInfo is DirectoryInfo
-                ? () => Directory.Delete(fileSystemInfo.FullName, true)
-                : () => File.Delete(fileSystemInfo.FullName);
+                  ? () => Directory.Delete(fileSystemInfo.FullName, true)
+                  : () => File.Delete(fileSystemInfo.FullName);
 
             // retry a few times. if a directory in this tree is open in Windows Explorer,
             // it might be locked for a little while WE cleans up handles
@@ -434,15 +532,25 @@ namespace Squirrel
             }
         }
 
-        //public static string PackageDirectoryForAppDir(string rootAppDirectory)
-        //{
-        //    return Path.Combine(rootAppDirectory, "packages");
-        //}
+        public static string AppDirForRelease(string rootAppDirectory, ReleaseEntry entry)
+        {
+            return Path.Combine(rootAppDirectory, "app-" + entry.Version.ToString());
+        }
 
-        //public static string LocalReleaseFileForAppDir(string rootAppDirectory)
-        //{
-        //    return Path.Combine(PackageDirectoryForAppDir(rootAppDirectory), "RELEASES");
-        //}
+        public static string AppDirForVersion(string rootAppDirectory, SemanticVersion version)
+        {
+            return Path.Combine(rootAppDirectory, "app-" + version.ToString());
+        }
+
+        public static string PackageDirectoryForAppDir(string rootAppDirectory)
+        {
+            return Path.Combine(rootAppDirectory, "packages");
+        }
+
+        public static string LocalReleaseFileForAppDir(string rootAppDirectory)
+        {
+            return Path.Combine(PackageDirectoryForAppDir(rootAppDirectory), "RELEASES");
+        }
 
         public static IEnumerable<ReleaseEntry> LoadLocalReleases(string localReleaseFile)
         {
@@ -454,31 +562,18 @@ namespace Squirrel
             }
         }
 
-        public static ReleaseEntry FindLatestFullVersion(IEnumerable<ReleaseEntry> localReleases, RID compatibleRid)
-        {
-            return FindCompatibleVersions(localReleases, compatibleRid).FirstOrDefault(f => !f.IsDelta);
-        }
-
-        public static IEnumerable<ReleaseEntry> FindCompatibleVersions(IEnumerable<ReleaseEntry> localReleases, RID compatibleRid)
+        public static ReleaseEntry FindCurrentVersion(IEnumerable<ReleaseEntry> localReleases)
         {
             if (!localReleases.Any()) {
                 return null;
             }
 
-            if (compatibleRid == null || !compatibleRid.IsValid) {
-                return localReleases.OrderByDescending(x => x.Version);
-            }
-
-            return localReleases
-                .Where(r => r.Rid.BaseRID == compatibleRid.BaseRID)
-                .Where(r => r.Rid.Architecture == compatibleRid.Architecture)
-                .OrderByDescending(x => x.Version);
+            return localReleases.OrderByDescending(x => x.Version).FirstOrDefault(x => !x.IsDelta);
         }
 
         public static string GetAppUserModelId(string packageId, string exeName)
         {
-            return String.Format("com.squirrel.{0}.{1}", packageId.Replace(" ", ""),
-                exeName.Replace(".exe", "").Replace(" ", ""));
+            return String.Format("com.squirrel.{0}.{1}", packageId.Replace(" ", ""), exeName.Replace(".exe", "").Replace(" ", ""));
         }
 
         public static bool IsHttpUrl(string urlOrPath)
@@ -522,7 +617,6 @@ namespace Squirrel
         }
 
         readonly static string[] peExtensions = new[] { ".exe", ".dll", ".node" };
-
         public static bool FileIsLikelyPEImage(string name)
         {
             var ext = Path.GetExtension(name);
@@ -582,7 +676,6 @@ namespace Squirrel
                     This.ErrorException(message ?? "", ex);
                     break;
                 }
-
                 throw;
             }
         }
@@ -606,7 +699,6 @@ namespace Squirrel
                     This.ErrorException(message ?? "", ex);
                     break;
                 }
-
                 throw;
             }
         }
@@ -674,24 +766,24 @@ namespace Squirrel
         public static void ConsoleWriteWithColor(string text, ConsoleColor color)
         {
             var fc = Console.ForegroundColor;
+            var bc = Console.BackgroundColor;
             Console.ForegroundColor = color;
+            Console.BackgroundColor = ConsoleColor.Black;
             Console.Write(text);
             Console.ForegroundColor = fc;
+            Console.BackgroundColor = bc;
         }
 
         static IFullLogger logger;
-
         static IFullLogger Log()
         {
-            return logger ??
-                   (logger = SquirrelLocator.CurrentMutable.GetService<ILogManager>().GetLogger(typeof(Utility)));
+            return logger ?? (logger = SquirrelLocator.CurrentMutable.GetService<ILogManager>().GetLogger(typeof(Utility)));
         }
 
         public static Guid CreateGuidFromHash(string text)
         {
             return CreateGuidFromHash(text, Utility.IsoOidNamespace);
         }
-
         public static Guid CreateGuidFromHash(byte[] data)
         {
             return CreateGuidFromHash(data, Utility.IsoOidNamespace);
@@ -768,44 +860,83 @@ namespace Squirrel
             guid[right] = temp;
         }
 
-        public const string SpecVersionFileName = "sq.version";
 
-        public static NuspecManifest ReadManifestFromVersionDir(string appVersionDir)
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+        public static bool ByteArrayCompareFast(ReadOnlySpan<byte> a1, ReadOnlySpan<byte> a2)
         {
-            NuspecManifest manifest;
-            string nuspec;
+            return a1.SequenceEqual(a2);
+        }
+#elif NETFRAMEWORK
+        [DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern int memcmp(byte[] b1, byte[] b2, long count);
+        public static bool ByteArrayCompareFast(byte[] b1, byte[] b2)
+        {
+            // Validate buffers are the same length.
+            // This also ensures that the count does not exceed the length of either buffer.  
+            return b1.Length == b2.Length && memcmp(b1, b2, b1.Length) == 0;
+        }
+#else
+        public static bool ByteArrayCompareFast(byte[] a1, byte[] a2)
+        {
+            return a1.SequenceEqual(a2);
+        }
+#endif
 
-            nuspec = Path.Combine(appVersionDir, SpecVersionFileName);
-            if (File.Exists(nuspec) && NuspecManifest.TryParseFromFile(nuspec, out manifest))
-                return manifest;
+        public class ProcessInfo
+        {
+            public string ProcessExePath { get; set; }
+            public int ProcessId { get; set; }
 
-            nuspec = Path.Combine(appVersionDir, "Contents", SpecVersionFileName);
-            if (File.Exists(nuspec) && NuspecManifest.TryParseFromFile(nuspec, out manifest))
-                return manifest;
-
-            nuspec = Path.Combine(appVersionDir, "mysqver");
-            if (File.Exists(nuspec) && NuspecManifest.TryParseFromFile(nuspec, out manifest))
-                return manifest;
-
-            nuspec = Path.Combine(appVersionDir, "current.version");
-            if (File.Exists(nuspec) && NuspecManifest.TryParseFromFile(nuspec, out manifest))
-                return manifest;
-
-            return null;
+            public ProcessInfo(string processExePath, int processId)
+            {
+                ProcessExePath = processExePath;
+                ProcessId = processId;
+            }
         }
 
-        public static void CopyFiles(DirectoryInfo source, DirectoryInfo target)
+#if NET5_0_OR_GREATER
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
+        public static List<ProcessInfo> EnumerateProcesses()
         {
-            Directory.CreateDirectory(target.FullName);
+            var pids = new int[2048];
+            var gch = GCHandle.Alloc(pids, GCHandleType.Pinned);
+            try {
+                if (!NativeMethods.EnumProcesses(gch.AddrOfPinnedObject(), sizeof(int) * pids.Length, out var bytesReturned))
+                    throw new Win32Exception("Failed to enumerate processes");
 
-            foreach (var fileInfo in source.GetFiles()) {
-                var path = Path.Combine(target.FullName, fileInfo.Name);
-                fileInfo.CopyTo(path, true);
-            }
+                if (bytesReturned < 1)
+                    throw new Exception("Failed to enumerate processes");
 
-            foreach (var sourceSubDir in source.GetDirectories()) {
-                var targetSubDir = target.CreateSubdirectory(sourceSubDir.Name);
-                CopyFiles(sourceSubDir, targetSubDir);
+                List<ProcessInfo> ret = new();
+
+                for (int i = 0; i < bytesReturned / sizeof(int); i++) {
+                    IntPtr hProcess = IntPtr.Zero;
+                    try {
+                        hProcess = NativeMethods.OpenProcess(ProcessAccess.QueryLimitedInformation, false, pids[i]);
+                        if (hProcess == IntPtr.Zero)
+                            continue;
+
+                        var sb = new StringBuilder(256);
+                        var capacity = sb.Capacity;
+                        if (!NativeMethods.QueryFullProcessImageName(hProcess, 0, sb, ref capacity))
+                            continue;
+
+                        var exePath = sb.ToString();
+                        if (String.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+                            continue;
+
+                        ret.Add(new ProcessInfo(sb.ToString(), pids[i]));
+                    } catch (Exception) {
+                        // don't care
+                    } finally {
+                        if (hProcess != IntPtr.Zero)
+                            NativeMethods.CloseHandle(hProcess);
+                    }
+                }
+                return ret;
+            } finally {
+                gch.Free();
             }
         }
     }

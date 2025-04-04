@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Squirrel.SimpleSplat;
@@ -19,21 +20,18 @@ namespace Squirrel
             // lock will be held until this class is disposed
             await acquireUpdateLock().ConfigureAwait(false);
 
-            if (_source == null)
+            if (_updateSource == null)
                 throw new InvalidOperationException("Cannot check for updates if no update source / url was provided in the construction of UpdateManager.");
 
-            progress ??= (_ => { });
-            ReleaseEntry[] localReleases = new ReleaseEntry[0];
+            progress = progress ?? (_ => { });
+            var localReleases = Enumerable.Empty<ReleaseEntry>();
+            var stagingId = intention == UpdaterIntention.Install ? null : getOrCreateStagedUserId();
             bool shouldInitialize = intention == UpdaterIntention.Install;
+            var localReleaseFile = Utility.LocalReleaseFileForAppDir(AppDirectory);
 
             if (intention != UpdaterIntention.Install) {
                 try {
-                    if (!File.Exists(_config.ReleasesFilePath)) {
-                        this.Log().Error($"File does not exist at '{_config.ReleasesFilePath}'. No local releases.");
-                        shouldInitialize = true;
-                    } else {
-                        localReleases = Utility.LoadLocalReleases(_config.ReleasesFilePath).ToArray();
-                    }
+                    localReleases = Utility.LoadLocalReleases(localReleaseFile);
                 } catch (Exception ex) {
                     // Something has gone pear-shaped, let's start from scratch
                     this.Log().WarnException("Failed to load local releases, starting from scratch", ex);
@@ -43,15 +41,13 @@ namespace Squirrel
 
             if (shouldInitialize) initializeClientAppDirectory();
 
-            var stagingId = intention == UpdaterIntention.Install ? null : getOrCreateStagedUserId();
-
-            var latestLocalRelease = localReleases.Count() > 0
-                ? localReleases.MaxBy(v => v.Version).First()
-                : null;
+            var latestLocalRelease = localReleases != null && localReleases.Count() > 0
+                ? localReleases.MaxBy(v => v.Version).First() :
+                null;
 
             progress(33);
 
-            var remoteReleases = await Utility.RetryAsync(() => _source.GetReleaseFeed(stagingId, latestLocalRelease)).ConfigureAwait(false);
+            var remoteReleases = await Utility.RetryAsync(() => _updateSource.GetReleaseFeed(stagingId, latestLocalRelease)).ConfigureAwait(false);
 
             progress(66);
 
@@ -64,16 +60,17 @@ namespace Squirrel
         void initializeClientAppDirectory()
         {
             // On bootstrap, we won't have any of our directories, create them
-            var pkgDir = _config.PackagesDir;
+            var pkgDir = PackagesDirectory;
             if (Directory.Exists(pkgDir)) {
-                Utility.DeleteFileOrDirectoryHard(pkgDir, throwOnFailure: false);
+                Utility.DeleteFileOrDirectoryHardOrGiveUp(pkgDir);
             }
+
             Directory.CreateDirectory(pkgDir);
         }
 
         UpdateInfo determineUpdateInfo(UpdaterIntention intention, IEnumerable<ReleaseEntry> localReleases, IEnumerable<ReleaseEntry> remoteReleases, bool ignoreDeltaUpdates)
         {
-            var packageDirectory = _config.PackagesDir;
+            var packageDirectory = PackagesDirectory;
             localReleases = localReleases ?? Enumerable.Empty<ReleaseEntry>();
 
             if (remoteReleases == null) {
@@ -85,8 +82,8 @@ namespace Squirrel
                 throw new Exception("Remote release File is empty or corrupted");
             }
 
-            var currentRelease = Utility.FindLatestFullVersion(localReleases, null);
-            var latestFullRelease = Utility.FindLatestFullVersion(remoteReleases, currentRelease.Rid);
+            var latestFullRelease = Utility.FindCurrentVersion(remoteReleases);
+            var currentRelease = Utility.FindCurrentVersion(localReleases);
 
             if (latestFullRelease == currentRelease) {
                 this.Log().Info("No updates, remote and local are the same");
@@ -111,7 +108,7 @@ namespace Squirrel
 
             if (localReleases.Max(x => x.Version) > remoteReleases.Max(x => x.Version)) {
                 this.Log().Warn("hwhat, local version is greater than remote version");
-                return UpdateInfo.Create(currentRelease, new[] { latestFullRelease }, packageDirectory);
+                return UpdateInfo.Create(Utility.FindCurrentVersion(localReleases), new[] { latestFullRelease }, packageDirectory);
             }
 
             return UpdateInfo.Create(currentRelease, remoteReleases, packageDirectory);
@@ -119,22 +116,18 @@ namespace Squirrel
 
         internal Guid? getOrCreateStagedUserId()
         {
-            var stagedUserIdFile = _config.BetaIdFilePath;
+            var stagedUserIdFile = Path.Combine(PackagesDirectory, ".betaId");
             var ret = default(Guid);
 
-            if (File.Exists(stagedUserIdFile)) {
-                try {
-                    if (!Guid.TryParse(File.ReadAllText(stagedUserIdFile, Encoding.UTF8), out ret)) {
-                        throw new Exception("File was read but contents were invalid");
-                    }
-
-                    this.Log().Info("Using existing staging user ID: {0}", ret.ToString());
-                    return ret;
-                } catch (Exception ex) {
-                    this.Log().DebugException("Couldn't read staging user ID, creating a new one", ex);
+            try {
+                if (!Guid.TryParse(File.ReadAllText(stagedUserIdFile, Encoding.UTF8), out ret)) {
+                    throw new Exception("File was read but contents were invalid");
                 }
-            } else {
-                this.Log().Warn($"No userId file exists at '{stagedUserIdFile}', creating a new one.");
+
+                this.Log().Info("Using existing staging user ID: {0}", ret.ToString());
+                return ret;
+            } catch (Exception ex) {
+                this.Log().DebugException("Couldn't read staging user ID, creating a blank one", ex);
             }
 
             var prng = new Random();

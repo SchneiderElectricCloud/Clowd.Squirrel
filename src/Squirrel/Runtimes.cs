@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using NuGet.Versioning;
 using Squirrel.SimpleSplat;
 
 namespace Squirrel
@@ -9,6 +8,9 @@ namespace Squirrel
     /// <summary>
     /// Contains static properties to access common supported runtimes, and a function to search for a runtime by name
     /// </summary>
+#if NET5_0_OR_GREATER
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     public static partial class Runtimes
     {
         /// <summary> Runtime for .NET Framework 4.5 </summary>
@@ -56,21 +58,14 @@ namespace Squirrel
         public static readonly DotnetInfo DOTNET6_X86 = new("6.0.2", RuntimeCpu.x86); // eg. net6.0-x86
         /// <summary> Runtime for .NET 6.0 Desktop Runtime (x64) </summary>
         public static readonly DotnetInfo DOTNET6_X64 = new("6.0.2", RuntimeCpu.x64); // eg. net6.0-x64
-        /// <summary> Runtime for .NET 6.0 Desktop Runtime (arm64) </summary>
-        public static readonly DotnetInfo DOTNET6_ARM64 = new("6.0.2", RuntimeCpu.arm64); // eg. net6.0-x64
         /// <summary> Runtime for .NET 7.0 Desktop Runtime (x86) </summary>
         public static readonly DotnetInfo DOTNET7_X86 = new("7.0", RuntimeCpu.x86); // eg. net7.0-x86
         /// <summary> Runtime for .NET 7.0 Desktop Runtime (x64) </summary>
         public static readonly DotnetInfo DOTNET7_X64 = new("7.0", RuntimeCpu.x64); // eg. net7.0-x64
-        /// <summary> Runtime for .NET 7.0 Desktop Runtime (arm64) </summary>
-        public static readonly DotnetInfo DOTNET7_ARM64 = new("7.0", RuntimeCpu.arm64); // eg. net7.0-arm64
         /// <summary> Runtime for .NET 8.0 Desktop Runtime (x86) </summary>
         public static readonly DotnetInfo DOTNET8_X86 = new("8.0", RuntimeCpu.x86); // eg. net8.0-x86
         /// <summary> Runtime for .NET 8.0 Desktop Runtime (x64) </summary>
         public static readonly DotnetInfo DOTNET8_X64 = new("8.0", RuntimeCpu.x64); // eg. net8.0-x64
-        /// <summary> Runtime for .NET 8.0 Desktop Runtime (arm64) </summary>
-        public static readonly DotnetInfo DOTNET8_ARM64 = new("8.0", RuntimeCpu.arm64); // eg. net8.0-arm64
-
 
         /// <summary> Runtime for Visual C++ 2010 Redistributable (x86) </summary>
         public static readonly VCRedist00 VCREDIST100_X86 = new("vcredist100-x86", "Visual C++ 2010 Redistributable (x86)", new(10, 00, 40219), RuntimeCpu.x86,
@@ -106,8 +101,6 @@ namespace Squirrel
         public static readonly VCRedist14 VCREDIST143_X86 = new("vcredist143-x86", "Visual C++ 2022 Redistributable (x86)", new(14, 30, 30704), RuntimeCpu.x86);
         /// <summary> Runtime for Visual C++ 2022 Redistributable (x64) </summary>
         public static readonly VCRedist14 VCREDIST143_X64 = new("vcredist143-x64", "Visual C++ 2022 Redistributable (x64)", new(14, 30, 30704), RuntimeCpu.x64);
-        /// <summary> Runtime for Visual C++ 2022 Redistributable (arm64) </summary>
-        public static readonly VCRedist14 VCREDIST143_ARM64 = new("vcredist143-arm64", "Visual C++ 2022 Redistributable (arm64)", new(14, 30, 30704), RuntimeCpu.arm64);
 
         /// <summary> An array of all the currently supported runtimes </summary>
         public static readonly RuntimeInfo[] All;
@@ -163,7 +156,7 @@ namespace Squirrel
                             Log.ErrorException($"Unable to verify version for runtime '{f}'", ex);
                         }
 
-                        if (latest != null && NuGetVersion.Parse(latest) < dni.MinVersion) {
+                        if (latest != null && SemanticVersion.Parse(latest) < dni.MinVersion) {
                             throw new Exception($"For runtime string '{f}', version provided ({dni.MinVersion}) is greater than the latest available version ({latest}).");
                         }
                     }

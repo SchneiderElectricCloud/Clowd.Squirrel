@@ -2,26 +2,26 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Versioning;
 using System.Threading;
 using System.Xml.Linq;
 using Squirrel.Lib;
 using Squirrel.NuGet;
-using Squirrel.SimpleSplat;
 
 namespace Squirrel
 {
+#if NET5_0_OR_GREATER
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     internal static class SquirrelAwareExecutableDetector
     {
         const string SQUIRREL_AWARE_KEY = "SquirrelAwareVersion";
-        static IFullLogger Log => SquirrelLocator.Current.GetService<ILogManager>().GetLogger(typeof(SquirrelAwareExecutableDetector));
 
         public static List<string> GetAllSquirrelAwareApps(string directory, int minimumVersion = 1)
         {
             var di = new DirectoryInfo(directory);
 
             return di.EnumerateFiles()
-                .Where(x => Utility.FileHasExtension(x.Name, ".exe"))
+                .Where(x => x.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 .Select(x => x.FullName)
                 .Where(x => (GetSquirrelAwareVersion(x) ?? -1) >= minimumVersion)
                 .ToList();
@@ -34,18 +34,13 @@ namespace Squirrel
 
             // ways to search for SquirrelAwareVersion, ordered by precedence
             // search exe-embedded values first, and if not found, move on to sidecar files
-            var detectors = new List<Func<string, int?>>();
-
-            if (SquirrelRuntimeInfo.IsWindows) {
-                detectors.Add(GetEmbeddedManifestSquirrelAwareValue);
-                detectors.Add(GetVersionBlockSquirrelAwareValue);
-            } else {
-                Log.Warn("Disabled embedded manifest SquirrelAware detection (only supported on windows).");
-            }
-
-            detectors.Add(GetSidecarSquirrelAwareValue);
-            detectors.Add(GetSideBySideManifestSquirrelAwareValue);
-            detectors.Add(GetSideBySideDllManifestSquirrelAwareValue);
+            var detectors = new Func<string, int?>[] {
+                GetEmbeddedManifestSquirrelAwareValue,
+                GetVersionBlockSquirrelAwareValue,
+                GetSidecarSquirrelAwareValue,
+                GetSideBySideManifestSquirrelAwareValue,
+                GetSideBySideDllManifestSquirrelAwareValue,
+            };
 
             for (int i = 0; i < 3; i++) {
                 bool error = false;
@@ -71,7 +66,6 @@ namespace Squirrel
             return null;
         }
 
-        [SupportedOSPlatform("windows")]
         static int? GetVersionBlockSquirrelAwareValue(string executable)
         {
             return StringFileInfo.ReadVersionInfo(executable, out var vi)
@@ -92,7 +86,6 @@ namespace Squirrel
                     return pv;
                 }
             }
-
             return null;
         }
 
@@ -103,7 +96,6 @@ namespace Squirrel
             if (File.Exists(manifestPath)) {
                 return ParseManifestAwareValue(File.ReadAllBytes(manifestPath));
             }
-
             return null;
         }
 
@@ -116,11 +108,9 @@ namespace Squirrel
             if (File.Exists(manifestPath)) {
                 return ParseManifestAwareValue(File.ReadAllBytes(manifestPath));
             }
-
             return null;
         }
 
-        [SupportedOSPlatform("windows")]
         static int? GetEmbeddedManifestSquirrelAwareValue(string executable)
         {
             // Looks for an embedded application manifest

@@ -38,13 +38,12 @@ namespace Squirrel.Sources
 
             var args = new Dictionary<string, string>();
 
-            if (SquirrelRuntimeInfo.SystemArch != RuntimeCpu.Unknown) {
-                args.Add("arch", SquirrelRuntimeInfo.SystemArch.ToString());
+            if (SquirrelRuntimeInfo.SystemArchitecture != RuntimeCpu.Unknown) {
+                args.Add("arch", SquirrelRuntimeInfo.SystemArchitecture.ToString());
             }
 
-            if (SquirrelRuntimeInfo.SystemOs != RuntimeOs.Unknown) {
-                args.Add("os", SquirrelRuntimeInfo.SystemOs.GetOsShortName());
-                args.Add("rid", SquirrelRuntimeInfo.SystemRid);
+            if (SquirrelRuntimeInfo.SystemOsName != null) {
+                args.Add("os", SquirrelRuntimeInfo.SystemOsName);
             }
 
             if (latestLocalRelease != null) {

@@ -1,30 +1,18 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using NuGet.Versioning;
 using Squirrel.NuGet;
 using Squirrel.SimpleSplat;
+using System.Runtime.Serialization;
+using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace Squirrel
 {
-    /// <summary>
-    /// Describes the requested release notes text format.
-    /// </summary>
-    public enum ReleaseNotesFormat
-    {
-        /// <summary> The original markdown release notes. </summary>
-        Markdown = 0,
-        /// <summary> Release notes translated into HTML. </summary>
-        Html = 1,
-    }
-
     /// <summary>
     /// Represents a Squirrel release, as described in a RELEASES file - usually also with an 
     /// accompanying package containing the files needed to apply the release.
@@ -58,17 +46,11 @@ namespace Squirrel
         /// </summary>
         float? StagingPercentage { get; }
 
-        /// <summary> 
-        /// The runtime identifier parsed from the file name. 
-        /// Used to determine if this package is suitable for the current operating system.
-        /// </summary>
-        RID Rid { get; }
-
         /// <summary>
         /// Given a local directory containing a package corresponding to this release, returns the 
         /// correspoding release notes from within the package.
         /// </summary>
-        string GetReleaseNotes(string packageDirectory, ReleaseNotesFormat format);
+        string GetReleaseNotes(string packageDirectory);
 
         /// <summary>
         /// Given a local directory containing a package corresponding to this release, 
@@ -95,8 +77,6 @@ namespace Squirrel
         [DataMember] public bool IsDelta { get; protected set; }
         /// <inheritdoc />
         [DataMember] public float? StagingPercentage { get; protected set; }
-        /// <inheritdoc />
-        [DataMember] public RID Rid { get; protected set; }
 
         /// <summary>
         /// Create a new instance of <see cref="ReleaseEntry"/>.
@@ -114,7 +94,6 @@ namespace Squirrel
             Version = identity.Version;
             PackageName = identity.PackageName;
             IsDelta = identity.IsDelta;
-            Rid = identity.Rid;
         }
 
         /// <inheritdoc />
@@ -138,17 +117,18 @@ namespace Squirrel
         public string PackageName { get; }
 
         /// <inheritdoc />
-        public string GetReleaseNotes(string packageDirectory, ReleaseNotesFormat format)
+        public string GetReleaseNotes(string packageDirectory)
         {
             var zp = new ZipPackage(Path.Combine(packageDirectory, Filename));
-            return format switch {
-                ReleaseNotesFormat.Markdown => zp.ReleaseNotes,
-                ReleaseNotesFormat.Html => zp.ReleaseNotesHtml,
-                _ => null,
-            };
+
+            if (String.IsNullOrWhiteSpace(zp.ReleaseNotes)) {
+                throw new Exception(String.Format("Invalid 'ReleaseNotes' value in nuspec file at '{0}'", Path.Combine(packageDirectory, Filename)));
+            }
+
+            return zp.ReleaseNotes;
         }
 
-        /// <inheritdoc />  
+        /// <inheritdoc />
         public Uri GetIconUrl(string packageDirectory)
         {
             var zp = new ZipPackage(Path.Combine(packageDirectory, Filename));
@@ -253,7 +233,7 @@ namespace Squirrel
                 .Where(x => x != null)
                 .ToArray();
 
-            return ret.Any(x => x == null) ? new ReleaseEntry[0] : ret;
+            return ret.Any(x => x == null) ? null : ret;
         }
 
         /// <summary>
@@ -350,18 +330,24 @@ namespace Squirrel
             // Write the new RELEASES file to a temp file then move it into
             // place
             var entries = entriesQueue.ToList();
-            using var _ = Utility.GetTempFileName(out var tempFile);
+            var tempFile = default(string);
+            Utility.WithTempFile(out tempFile, releasePackagesDir);
 
-            using (var of = File.OpenWrite(tempFile)) {
-                if (entries.Count > 0) WriteReleaseFile(entries, of);
+            try {
+                using (var of = File.OpenWrite(tempFile)) {
+                    if (entries.Count > 0) WriteReleaseFile(entries, of);
+                }
+
+                var target = Path.Combine(packagesDir.FullName, "RELEASES");
+                if (File.Exists(target)) {
+                    File.Delete(target);
+                }
+
+                File.Move(tempFile, target);
+            } finally {
+                if (File.Exists(tempFile)) Utility.DeleteFileOrDirectoryHardOrGiveUp(tempFile);
             }
 
-            var target = Path.Combine(packagesDir.FullName, "RELEASES");
-            if (File.Exists(target)) {
-                File.Delete(target);
-            }
-
-            File.Move(tempFile, target);
             return entries;
         }
 
@@ -382,27 +368,39 @@ namespace Squirrel
             return Filename.GetHashCode();
         }
 
+        /// <summary>
+        /// Given a list of releases and a specified release package, returns the release package
+        /// directly previous to the specified version.
+        /// </summary>
+        internal static ReleasePackage GetPreviousRelease(IEnumerable<ReleaseEntry> releaseEntries, IReleasePackage package, string targetDir)
+        {
+            if (releaseEntries == null || !releaseEntries.Any()) return null;
+            return releaseEntries
+                .Where(x => x.IsDelta == false)
+                .Where(x => x.Version < package.Version)
+                .OrderByDescending(x => x.Version)
+                .Select(x => new ReleasePackage(Path.Combine(targetDir, x.Filename), true))
+                .FirstOrDefault();
+        }
+
         static readonly Regex _suffixRegex = new Regex(@"(-full|-delta)?\.nupkg$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         static readonly Regex _versionStartRegex = new Regex(@"[\.-](0|[1-9]\d*)\.(0|[1-9]\d*)($|[^\d])", RegexOptions.Compiled);
-        static readonly Regex _ridRegex = new Regex(@"-(?<os>osx|win)\.?(?<ver>[\d\.]+)?(?:-(?<arch>(?:x|arm)\d{2}))?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         internal class EntryNameInfo
         {
             public string PackageName { get; set; }
             public SemanticVersion Version { get; set; }
             public bool IsDelta { get; set; }
-            public RID Rid { get; set; }
 
             public EntryNameInfo()
             {
             }
 
-            public EntryNameInfo(string packageName, SemanticVersion version, bool isDelta, RID rid)
+            public EntryNameInfo(string packageName, SemanticVersion version, bool isDelta)
             {
                 PackageName = packageName;
                 Version = version;
                 IsDelta = isDelta;
-                Rid = rid;
             }
         }
 
@@ -414,7 +412,7 @@ namespace Squirrel
         internal static EntryNameInfo ParseEntryFileName(string fileName)
         {
             if (!fileName.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase))
-                return new EntryNameInfo(null, null, false, null);
+                return new EntryNameInfo();
 
             bool delta = Path.GetFileNameWithoutExtension(fileName).EndsWith("-delta", StringComparison.OrdinalIgnoreCase);
 
@@ -422,22 +420,14 @@ namespace Squirrel
 
             var match = _versionStartRegex.Match(nameAndVer);
             if (!match.Success)
-                return new EntryNameInfo(null, null, delta, null);
+                return new EntryNameInfo(null, null, delta);
 
             var verIdx = match.Index;
             var name = nameAndVer.Substring(0, verIdx);
             var version = nameAndVer.Substring(verIdx + 1);
 
-            RID rid = null;
-            var ridMatch = _ridRegex.Match(version);
-
-            if (ridMatch.Success) {
-                rid = RID.Parse(ridMatch.Value.TrimStart('-'));
-                version = version.Substring(0, ridMatch.Index);
-            }
-
-            var semVer = NuGetVersion.Parse(version);
-            return new EntryNameInfo(name, semVer, delta, rid);
+            var semVer = new SemanticVersion(version);
+            return new EntryNameInfo(name, semVer, delta);
         }
     }
 }

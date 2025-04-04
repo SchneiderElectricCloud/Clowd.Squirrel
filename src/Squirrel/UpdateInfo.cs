@@ -16,19 +16,27 @@ namespace Squirrel
         /// <summary>
         /// The currently executing version of the application, or null if not currently installed.
         /// </summary>
-        [DataMember] public ReleaseEntry LatestLocalReleaseEntry { get; protected set; }
+        [DataMember] public ReleaseEntry CurrentlyInstalledVersion { get; protected set; }
 
         /// <summary>
-        /// The same as <see cref="LatestLocalReleaseEntry"/> if there are no updates available, otherwise
+        /// The same as <see cref="CurrentlyInstalledVersion"/> if there are no updates available, otherwise
         /// this will be the version that we are updating to.
         /// </summary>
         [DataMember] public ReleaseEntry FutureReleaseEntry { get; protected set; }
 
         /// <summary>
-        /// The list of versions between the <see cref="LatestLocalReleaseEntry"/> and <see cref="FutureReleaseEntry"/>.
+        /// The list of versions between the <see cref="CurrentlyInstalledVersion"/> and <see cref="FutureReleaseEntry"/>.
         /// These will all be applied in order.
         /// </summary>
         [DataMember] public List<ReleaseEntry> ReleasesToApply { get; protected set; }
+
+        /// <summary>
+        /// True if the currently executing program is not currently installed
+        /// </summary>
+        [IgnoreDataMember]
+        public bool IsBootstrapping {
+            get { return CurrentlyInstalledVersion == null; }
+        }
 
         /// <summary>
         /// Path to folder containing local/downloaded packages
@@ -42,11 +50,11 @@ namespace Squirrel
         protected UpdateInfo(ReleaseEntry currentlyInstalledVersion, IEnumerable<ReleaseEntry> releasesToApply, string packageDirectory)
         {
             // NB: When bootstrapping, CurrentlyInstalledVersion is null!
-            LatestLocalReleaseEntry = currentlyInstalledVersion;
+            CurrentlyInstalledVersion = currentlyInstalledVersion;
             ReleasesToApply = (releasesToApply ?? Enumerable.Empty<ReleaseEntry>()).ToList();
             FutureReleaseEntry = ReleasesToApply.Any() ?
                 ReleasesToApply.MaxBy(x => x.Version).FirstOrDefault() :
-                LatestLocalReleaseEntry;
+                CurrentlyInstalledVersion;
 
             this.PackageDirectory = packageDirectory;
         }
@@ -54,12 +62,12 @@ namespace Squirrel
         /// <summary>
         /// Retrieves all the release notes for pending packages (ie. <see cref="ReleasesToApply"/>)
         /// </summary>
-        public Dictionary<ReleaseEntry, string> FetchReleaseNotes(ReleaseNotesFormat format)
+        public Dictionary<ReleaseEntry, string> FetchReleaseNotes()
         {
             return ReleasesToApply
                 .SelectMany(x => {
                     try {
-                        var releaseNotes = x.GetReleaseNotes(PackageDirectory, format);
+                        var releaseNotes = x.GetReleaseNotes(PackageDirectory);
                         return EnumerableExtensions.Return(Tuple.Create(x, releaseNotes));
                     } catch (Exception ex) {
                         this.Log().WarnException("Couldn't get release notes for:" + x.Filename, ex);
@@ -94,17 +102,11 @@ namespace Squirrel
 
             var newerThanUs = availableReleases
                 .Where(x => x.Version > currentVersion.Version)
-                .OrderBy(v => v.Version)
-                .ToArray();
+                .OrderBy(v => v.Version);
 
             var deltasSize = newerThanUs.Where(x => x.IsDelta).Sum(x => x.Filesize);
-            var deltasCount = newerThanUs.Count(x => x.IsDelta);
 
-            // delta's are cheap to download, but really expensive to apply.
-            // full packages are more expensive to download, but really cheap to apply.
-            // this tries to find a good balance of both. we will go for the full if
-            // there are too many delta's or if their file size is too large.
-            return (deltasSize > 0 && (deltasSize * 10) < latestFull.Filesize && deltasCount <= 10) ?
+            return (deltasSize < latestFull.Filesize && deltasSize > 0) ?
                 new UpdateInfo(currentVersion, newerThanUs.Where(x => x.IsDelta).ToArray(), packageDirectory) :
                 new UpdateInfo(currentVersion, new[] { latestFull }, packageDirectory);
         }

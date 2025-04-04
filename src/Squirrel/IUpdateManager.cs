@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using NuGet.Versioning;
 using Squirrel.SimpleSplat;
 
 namespace Squirrel
@@ -107,14 +105,6 @@ namespace Squirrel
         Task<string> ApplyReleases(UpdateInfo updateInfo, Action<int> progress = null);
 
         /// <summary>
-        /// This will check for updates, download any new available updates, and apply those
-        /// updates in a single step. The same task can be accomplished by using <see cref="IUpdateManager.CheckForUpdate"/>, 
-        /// followed by <see cref="IUpdateManager.DownloadReleases"/> and <see cref="IUpdateManager.ApplyReleases"/>.
-        /// </summary>
-        /// <returns>The installed update, or null if there were no updates available</returns>
-        Task<ReleaseEntry> UpdateApp(Action<int> progress = null);
-
-        /// <summary>
         /// Completely Installs a targeted app
         /// </summary>
         /// <param name="silentInstall">If true, don't run the app once install completes.</param>
@@ -140,19 +130,15 @@ namespace Squirrel
     /// </summary>
     public interface IAppTools
     {
-        /// <summary>True if the current executable is inside the target <see cref="AppDirectory"/>.</summary>
-        bool IsInstalledApp { get; }
-
-        /// <summary>The directory the app is (or will be) installed in.</summary>
-        string AppDirectory { get; }
-
         /// <summary>
         /// Gets the currently installed version of the given executable, or if
         /// not given, the currently running assembly
         /// </summary>
+        /// <param name="executable">The executable to check, or null for this 
+        /// executable</param>
         /// <returns>The running version, or null if this is not a Squirrel
         /// installed app (i.e. you're running from VS)</returns>
-        SemanticVersion CurrentlyInstalledVersion();
+        SemanticVersion CurrentlyInstalledVersion(string executable = null);
 
         /// <summary>
         /// Creates an entry in Programs and Features based on the currently 
@@ -198,18 +184,72 @@ namespace Squirrel
         /// app install directory.</param>
         /// <param name="locations">The locations to install the shortcut</param>
         void RemoveShortcutsForExecutable(string exeName, ShortcutLocation locations);
+
+        /// <summary>
+        /// Sets the AppUserModelID of the current process to match that which was added to the 
+        /// shell shortcuts. This ID is used to group an application's processes and windows under 
+        /// a single taskbar button.
+        /// </summary>
+        void SetProcessAppUserModelId();
     }
 
     /// <summary>
     /// Contains extension methods for <see cref="IUpdateManager"/> which provide simplified functionality
     /// </summary>
+#if NET5_0_OR_GREATER
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     public static class EasyModeMixin
     {
+        /// <summary>
+        /// This will check for updates, download any new available updates, and apply those
+        /// updates in a single step. The same task can be accomplished by using <see cref="IUpdateManager.CheckForUpdate"/>, 
+        /// followed by <see cref="IUpdateManager.DownloadReleases"/> and <see cref="IUpdateManager.ApplyReleases"/>.
+        /// </summary>
+        /// <returns>The installed update, or null if there were no updates available</returns>
+        public static async Task<ReleaseEntry> UpdateApp(this IUpdateManager This, Action<int> progress = null)
+        {
+            progress = progress ?? (_ => { });
+            This.Log().Info("Starting automatic update");
+
+            bool ignoreDeltaUpdates = false;
+
+        retry:
+            var updateInfo = default(UpdateInfo);
+
+            try {
+                updateInfo = await This.ErrorIfThrows(() => This.CheckForUpdate(ignoreDeltaUpdates, x => progress(x / 3)),
+                    "Failed to check for updates").ConfigureAwait(false);
+
+                await This.ErrorIfThrows(() =>
+                    This.DownloadReleases(updateInfo.ReleasesToApply, x => progress(x / 3 + 33)),
+                    "Failed to download updates").ConfigureAwait(false);
+
+                await This.ErrorIfThrows(() =>
+                    This.ApplyReleases(updateInfo, x => progress(x / 3 + 66)),
+                    "Failed to apply updates").ConfigureAwait(false);
+
+                await This.ErrorIfThrows(() =>
+                    This.CreateUninstallerRegistryEntry(),
+                    "Failed to set up uninstaller").ConfigureAwait(false);
+            } catch {
+                if (ignoreDeltaUpdates == false) {
+                    ignoreDeltaUpdates = true;
+                    goto retry;
+                }
+
+                throw;
+            }
+
+            return updateInfo.ReleasesToApply.Any() ?
+                updateInfo.ReleasesToApply.MaxBy(x => x.Version).Last() :
+                default(ReleaseEntry);
+        }
+
         /// <summary>
         /// Create a shortcut to the currently running executable at the specified locations. 
         /// See <see cref="IAppTools.CreateShortcutsForExecutable"/> to create a shortcut to a different program
         /// </summary>
-        [SupportedOSPlatform("windows")]
         public static void CreateShortcutForThisExe(this IAppTools This, ShortcutLocation location = ShortcutLocation.Desktop | ShortcutLocation.StartMenu)
         {
             This.CreateShortcutsForExecutable(
@@ -223,7 +263,6 @@ namespace Squirrel
         /// <summary>
         /// Removes a shortcut for the currently running executable at the specified locations.
         /// </summary>
-        [SupportedOSPlatform("windows")]
         public static void RemoveShortcutForThisExe(this IAppTools This, ShortcutLocation location = ShortcutLocation.Desktop | ShortcutLocation.StartMenu)
         {
             This.RemoveShortcutsForExecutable(

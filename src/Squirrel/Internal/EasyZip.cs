@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,39 +16,63 @@ namespace Squirrel
 
         public static void ExtractZipToDirectory(string inputFile, string outputDirectory)
         {
+            if (Extract7z(inputFile, outputDirectory))
+                return;
+
             Log.Info($"Extracting '{inputFile}' to '{outputDirectory}' using System.IO.Compression...");
+
             Utility.DeleteFileOrDirectoryHard(outputDirectory);
             ZipFile.ExtractToDirectory(inputFile, outputDirectory);
         }
 
-        public static void CreateZipFromDirectory(string outputFile, string directoryToCompress, bool nestDirectory = false)
+        public static void CreateZipFromDirectory(string outputFile, string directoryToCompress)
         {
-            if (nestDirectory) {
-                throw new NotImplementedException();
-                //AddAllFromDirectoryInNestedDir(archive, directoryToCompress);
-            } else {
-                Log.Info($"Compressing '{directoryToCompress}' to '{outputFile}' using System.IO.Compression...");
-                ZipFile.CreateFromDirectory(directoryToCompress, outputFile);
+            if (Compress7z(outputFile, directoryToCompress))
+                return;
+
+            Log.Info($"Compressing '{directoryToCompress}' to '{outputFile}' using System.IO.Compression...");
+            ZipFile.CreateFromDirectory(directoryToCompress, outputFile);
+        }
+
+        private static bool Extract7z(string zipFilePath, string outFolder)
+        {
+#if !NETFRAMEWORK
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return false;
+#endif
+            Log.Info($"Extracting '{zipFilePath}' to '{outFolder}' using 7z...");
+            try {
+                var args = String.Format("x \"{0}\" -tzip -mmt on -aoa -y -o\"{1}\" *", zipFilePath, outFolder);
+                var psi = Utility.CreateProcessStartInfo(HelperExe.SevenZipPath, args);
+                var result = Utility.InvokeProcessUnsafeAsync(psi, CancellationToken.None)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                if (result.ExitCode != 0) throw new Exception(result.StdOutput);
+                return true;
+            } catch (Exception ex) {
+                Log.Warn("Unable to extract archive with 7z.exe\n" + ex.Message);
+                return false;
             }
         }
 
-        //private static void AddAllFromDirectoryInNestedDir(
-        //    IWritableArchive writableArchive,
-        //    string filePath, string searchPattern = "*.*", SearchOption searchOption = SearchOption.AllDirectories)
-        //{
-        //    var di = new DirectoryInfo(filePath);
-        //    var parent = di.Parent;
-
-        //    using (writableArchive.PauseEntryRebuilding())
-        //    {
-        //        foreach (var path in Directory.EnumerateFiles(filePath, searchPattern, searchOption))
-        //        {
-        //            var fileInfo = new FileInfo(path);
-        //            writableArchive.AddEntry(fileInfo.FullName.Substring(parent.FullName.Length), fileInfo.OpenRead(), true, fileInfo.Length,
-        //                fileInfo.LastWriteTime);
-        //        }
-        //    }
-        //}
+        private static bool Compress7z(string zipFilePath, string inFolder)
+        {
+#if !NETFRAMEWORK
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return false;
+#endif
+            Log.Info($"Compressing '{inFolder}' to '{zipFilePath}' using 7z...");
+            try {
+                var args = String.Format("a \"{0}\" -tzip -aoa -y -mmt on *", zipFilePath);
+                var psi = Utility.CreateProcessStartInfo(HelperExe.SevenZipPath, args, inFolder);
+                var result = Utility.InvokeProcessUnsafeAsync(psi, CancellationToken.None)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                if (result.ExitCode != 0) throw new Exception(result.StdOutput);
+                return true;
+            } catch (Exception ex) {
+                Log.Warn("Unable to create archive with 7z.exe\n" + ex.Message);
+                return false;
+            }
+        }
 
         public static bool IsDirectory(this ZipArchiveEntry entry)
         {
