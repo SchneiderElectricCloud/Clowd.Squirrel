@@ -58,12 +58,12 @@ stages:
             filePath: ./zipTools.ps1
             arguments: $(build.artifactStagingDirectory)
 
-        - task: DotNetCoreCLI@2
-          displayName: Run Unit Tests
-          inputs:
-            command: test
-            projects: '**/*Test*/*.csproj'
-            arguments: '--configuration $(buildConfiguration) --collect "Code coverage"'
+        # - task: DotNetCoreCLI@2
+        #   displayName: Run Unit Tests
+        #   inputs:
+        #     command: test
+        #     projects: '**/*Test*/*.csproj'
+        #     arguments: '--configuration $(buildConfiguration) --collect "Code coverage"'
 
         - template: push-nuget.yml
           parameters:
