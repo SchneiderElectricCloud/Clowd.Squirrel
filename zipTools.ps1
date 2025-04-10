@@ -1,15 +1,9 @@
 param(
   [string]$out
 )
-$version = "3.0.0"
-<#Copy-Item -Path "$PSScriptRoot\vendor\7zip\*" -Destination "$BinOut" -Recurse
-Copy-Item -Path "$PSScriptRoot\vendor\wix\*" -Destination "$BinOut" -Recurse
-Copy-Item "$In\Win32\Setup.exe" -Destination "$BinOut"
-Copy-Item "$In\Win32\StubExecutable.exe" -Destination "$BinOut"
-Copy-Item "$PSScriptRoot\vendor\nuget.exe" -Destination "$BinOut"
-Copy-Item "$PSScriptRoot\vendor\rcedit.exe" -Destination "$BinOut"
-Copy-Item "$PSScriptRoot\vendor\signtool.exe" -Destination "$BinOut"
-Copy-Item "$PSScriptRoot\vendor\singlefilehost.exe" -Destination "$BinOut"#>
+$version = "3.0.0-beta-0002"
+$location = [string](Get-Location)
+$root = "$location\build\Release"
 
 #Copy-Item -Path ".\build\Release\*.exe" -Destination ".\build\Publish\"
 
