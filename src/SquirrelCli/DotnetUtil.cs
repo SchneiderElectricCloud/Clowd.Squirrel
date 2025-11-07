@@ -27,11 +27,13 @@ namespace SquirrelCli
 
         public static void CheckDotnetReferences(string filePath, PeNet.PeFile pe, IEnumerable<Runtimes.RuntimeInfo> dependencies)
         {
-            try {
+            try
+            {
                 var name = Path.GetFileName(filePath);
                 var baseDir = Path.GetDirectoryName(filePath);
 
-                if (pe == null) {
+                if (pe == null)
+                {
                     return;
                 }
 
@@ -40,16 +42,22 @@ namespace SquirrelCli
                 var probablyBitness = pe.IsExe && pe.Is32Bit ? "-x86" : ""; // used to construct a suggested reference later
 
                 // might be an app host or single file bundle, lets look for a dotnet "dll"
-                if (pe.IsExe && !pe.IsDotNet) {
-                    if (IsSingleFileBundle(filePath)) {
+                if (pe.IsExe && !pe.IsDotNet)
+                {
+                    if (IsSingleFileBundle(filePath))
+                    {
                         // TODO
                         Log.Info("Checking dependencies in SingleFileBundle's is not supported.");
                         return;
-                    } else {
+                    }
+                    else
+                    {
                         var st = pe.Resources.VsVersionInfo.StringFileInfo.StringTable;
-                        if (st.Length > 0) {
+                        if (st.Length > 0)
+                        {
                             var original = st[0].OriginalFilename;
-                            if (original != null && original.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase) && File.Exists(Path.Combine(baseDir, original))) {
+                            if (original != null && original.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase) && File.Exists(Path.Combine(baseDir, original)))
+                            {
                                 pe = new PeNet.PeFile(Path.Combine(baseDir, original));
                                 Log.Debug($"Redirecting to {original}");
                             }
@@ -58,7 +66,8 @@ namespace SquirrelCli
                 }
 
                 var refs = pe.MetaDataStreamTablesHeader?.Tables?.AssemblyRef ?? new();
-                if (!pe.IsDotNet || refs.Count == 0) {
+                if (!pe.IsDotNet || refs.Count == 0)
+                {
                     Log.Info($"{name} is not a CLR assembly or no assembly references were found.");
                     return;
                 }
@@ -66,21 +75,26 @@ namespace SquirrelCli
                 var lookup = refs.ToDictionary(x => pe.MetaDataStreamString.GetStringAtIndex(x.Name), x => x, StringComparer.InvariantCultureIgnoreCase);
 
                 // base lib is "mscorlib" for full framework or "System.Runtime" for dotnet
-                if (lookup.ContainsKey("mscorlib")) {
+                if (lookup.ContainsKey("mscorlib"))
+                {
                     Log.Debug($"{name} references the full framework, skipping....");
                     return;
                 }
 
                 var foundcore = lookup.TryGetValue("System.Runtime", out var corelib);
-                if (!foundcore) {
+                if (!foundcore)
+                {
                     Log.Debug($"{name} has no reference to a known core lib, skipping...");
                     return;
                 }
 
                 // don't bother checking any assemblies (exe or dll) that are present in the package
-                foreach (var k in Directory.GetFiles(baseDir)) {
-                    if (Utility.FileIsLikelyPEImage(k)) {
-                        if (lookup.ContainsKey(Path.GetFileNameWithoutExtension(k))) {
+                foreach (var k in Directory.GetFiles(baseDir))
+                {
+                    if (Utility.FileIsLikelyPEImage(k))
+                    {
+                        if (lookup.ContainsKey(Path.GetFileNameWithoutExtension(k)))
+                        {
                             Log.Debug($"Reference {Path.GetFileName(k)} found in local directory.");
                             lookup.Remove(Path.GetFileNameWithoutExtension(k));
                         }
@@ -93,7 +107,8 @@ namespace SquirrelCli
                 var runtime = dependencies.OfType<Runtimes.DotnetInfo>()
                     .FirstOrDefault(f => f.MinVersion.Major == corelib.MajorVersion && f.MinVersion.Minor == corelib.MinorVersion);
 
-                if (runtime == null) {
+                if (runtime == null)
+                {
                     var suggestedArg = $"--framework net{corelib.MajorVersion}.{corelib.MinorVersion}" + probablyBitness;
                     Log.Warn($"{name} has {lookup.Count} unresolved references, and no matching runtimes were found. (Are you missing the '{suggestedArg}' argument?)");
                     foreach (var f in lookup)
@@ -102,13 +117,17 @@ namespace SquirrelCli
                     return;
                 }
 
-                foreach (var f in lookup) {
+                foreach (var f in lookup)
+                {
                     var fver = new SemanticVersion(f.Value.MajorVersion, f.Value.MinorVersion, f.Value.BuildNumber, f.Value.RevisionNumber);
-                    if (fver > runtime.MinVersion) {
+                    if (fver > runtime.MinVersion)
+                    {
                         Log.Warn($"{name} references {f.Key},Version={fver} - which is higher than the current runtime version ({runtime.MinVersion}).");
                     }
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Log.WarnException("Failed to verify dependencies.", ex);
             }
         }
@@ -150,7 +169,7 @@ namespace SquirrelCli
                 BundleOptions.EnableCompression,
                 OSPlatform.Windows,
                 Architecture.X86,
-                new Version(6, 0),
+                new Version(8, 0),
                 false,
                 sourceName
             );
@@ -164,26 +183,35 @@ namespace SquirrelCli
 
         private static void DumpPackageAssemblies(string packageFileName, string outputDirectory)
         {
-            if (!HostWriter.IsBundle(packageFileName, out long bundleHeaderOffset)) {
+            if (!HostWriter.IsBundle(packageFileName, out long bundleHeaderOffset))
+            {
                 throw new InvalidOperationException($"Cannot dump assembiles for {packageFileName}, because it is not a single file bundle.");
             }
 
-            using (var memoryMappedPackage = MemoryMappedFile.CreateFromFile(packageFileName, FileMode.Open, null, 0, MemoryMappedFileAccess.Read)) {
-                using (var packageView = memoryMappedPackage.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read)) {
+            using (var memoryMappedPackage = MemoryMappedFile.CreateFromFile(packageFileName, FileMode.Open, null, 0, MemoryMappedFileAccess.Read))
+            {
+                using (var packageView = memoryMappedPackage.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read))
+                {
                     var manifest = DotnetUtil.ReadManifest(packageView, bundleHeaderOffset);
-                    foreach (var entry in manifest.Entries) {
+                    foreach (var entry in manifest.Entries)
+                    {
                         Stream contents;
 
-                        if (entry.CompressedSize == 0) {
+                        if (entry.CompressedSize == 0)
+                        {
                             contents = new UnmanagedMemoryStream(packageView.SafeMemoryMappedViewHandle, entry.Offset, entry.Size);
-                        } else {
+                        }
+                        else
+                        {
                             Stream compressedStream = new UnmanagedMemoryStream(packageView.SafeMemoryMappedViewHandle, entry.Offset, entry.CompressedSize);
-                            Stream decompressedStream = new MemoryStream((int) entry.Size);
-                            using (var deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress)) {
+                            Stream decompressedStream = new MemoryStream((int)entry.Size);
+                            using (var deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress))
+                            {
                                 deflateStream.CopyTo(decompressedStream);
                             }
 
-                            if (decompressedStream.Length != entry.Size) {
+                            if (decompressedStream.Length != entry.Size)
+                            {
                                 throw new Exception($"Corrupted single-file entry '${entry.RelativePath}'. Declared decompressed size '${entry.Size}' is not the same as actual decompressed size '${decompressedStream.Length}'.");
                             }
 
@@ -191,7 +219,8 @@ namespace SquirrelCli
                             contents = decompressedStream;
                         }
 
-                        using (var fileStream = File.Create(Path.Combine(outputDirectory, entry.RelativePath))) {
+                        using (var fileStream = File.Create(Path.Combine(outputDirectory, entry.RelativePath)))
+                        {
                             contents.CopyTo(fileStream);
                         }
                     }
@@ -211,7 +240,8 @@ namespace SquirrelCli
             Array.Sort(sources, StringComparer.Ordinal);
 
             List<FileSpec> fileSpecs = new List<FileSpec>(sources.Length);
-            foreach (var file in sources) {
+            foreach (var file in sources)
+            {
                 fileSpecs.Add(new FileSpec(file, Path.GetRelativePath(sourceDir, file)));
             }
 
@@ -262,7 +292,7 @@ namespace SquirrelCli
 
         static UnmanagedMemoryStream AsStream(MemoryMappedViewAccessor view)
         {
-            long size = checked((long) view.SafeMemoryMappedViewHandle.ByteLength);
+            long size = checked((long)view.SafeMemoryMappedViewHandle.ByteLength);
             return new UnmanagedMemoryStream(view.SafeMemoryMappedViewHandle, 0, size);
         }
 
@@ -281,12 +311,14 @@ namespace SquirrelCli
             header.MinorVersion = reader.ReadUInt32();
 
             // Major versions 3, 4 and 5 were skipped to align bundle versioning with .NET versioning scheme
-            if (header.MajorVersion < 1 || header.MajorVersion > 6) {
+            if (header.MajorVersion < 1 || header.MajorVersion > 6)
+            {
                 throw new InvalidDataException($"Unsupported manifest version: {header.MajorVersion}.{header.MinorVersion}");
             }
             header.FileCount = reader.ReadInt32();
             header.BundleID = reader.ReadString();
-            if (header.MajorVersion >= 2) {
+            if (header.MajorVersion >= 2)
+            {
                 header.DepsJsonOffset = reader.ReadInt64();
                 header.DepsJsonSize = reader.ReadInt64();
                 header.RuntimeConfigJsonOffset = reader.ReadInt64();
@@ -294,7 +326,8 @@ namespace SquirrelCli
                 header.Flags = reader.ReadUInt64();
             }
             var entries = ImmutableArray.CreateBuilder<Entry>(header.FileCount);
-            for (int i = 0; i < header.FileCount; i++) {
+            for (int i = 0; i < header.FileCount; i++)
+            {
                 entries.Add(ReadEntry(reader, header.MajorVersion));
             }
             header.Entries = entries.MoveToImmutable();
@@ -307,7 +340,7 @@ namespace SquirrelCli
             entry.Offset = reader.ReadInt64();
             entry.Size = reader.ReadInt64();
             entry.CompressedSize = bundleMajorVersion >= 6 ? reader.ReadInt64() : 0;
-            entry.Type = (FileType) reader.ReadByte();
+            entry.Type = (FileType)reader.ReadByte();
             entry.RelativePath = reader.ReadString();
             return entry;
         }
