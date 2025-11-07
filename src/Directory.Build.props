@@ -8,7 +8,7 @@
     <OutputPath>$(BaseOutputPath)$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    
+
     <LangVersion>9</LangVersion>
     <SignAssembly>True</SignAssembly>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
@@ -16,14 +16,14 @@
     <DebugType>embedded</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=./</PathMap>
-    
+
     <Product>Squirrel</Product>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <Copyright>Copyright © Caelan Sayler 2021</Copyright>
-    <Authors>Caelan Sayler</Authors>
+    <Copyright>Copyright © Schneider Electric 2025</Copyright>
+    <Authors>Caelan Sayler,SE</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/clowd/Clowd.Squirrel</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/clowd/Clowd.Squirrel</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/SchneiderElectricCloud/Clowd.Squirrel</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/SchneiderElectricCloud/Clowd.Squirrel</RepositoryUrl>
     <PackageTags>windows;macos;osx;updater;dotnet;installer;desktop;squirrel;autoupdate;automatic-updates</PackageTags>
   </PropertyGroup>
 

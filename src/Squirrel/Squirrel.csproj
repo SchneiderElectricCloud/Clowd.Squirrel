@@ -7,7 +7,7 @@
     <Description>Squirrel</Description>
     <Title>Squirrel</Title>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>Clowd.Squirrel</PackageId>
+    <PackageId>SE.Clowd.Squirrel</PackageId>
     <Title>Squirrel Updater</Title>
     <Description>Quick and easy installer and automatic updates for desktop applications</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
