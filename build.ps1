@@ -53,6 +53,6 @@ Remove-Item "$ToolsDir\*.pdb"
 Remove-Item "$ToolsDir\7za.exe"
 
 Write-Host "Re-assembling Packages" -ForegroundColor Magenta
-seven a "Clowd.Squirrel.$version.nupkg" -tzip -mx9 "$PSScriptRoot\build\Release\squirrel\*"
+seven a "SE.Clowd.Squirrel.$version.nupkg" -tzip -mx9 "$PSScriptRoot\build\Release\squirrel\*"
 
 Write-Host "Done." -ForegroundColor Magenta
