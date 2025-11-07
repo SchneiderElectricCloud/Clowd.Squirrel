@@ -33,11 +33,16 @@ namespace Microsoft.NET.HostModel.Bundle
         {
             OS = os ?? HostOS;
             Arch = arch ?? RuntimeInformation.OSArchitecture;
-            FrameworkVersion = targetFrameworkVersion ?? net60;
+            FrameworkVersion = targetFrameworkVersion ?? net80;
 
             Debug.Assert(IsLinux || IsOSX || IsWindows);
 
-            if (FrameworkVersion.CompareTo(net60) >= 0)
+            if (FrameworkVersion.CompareTo(net80) >= 0)
+            {
+                BundleMajorVersion = 8u;
+                DefaultOptions = BundleOptions.None;
+            }
+            else if (FrameworkVersion.CompareTo(net60) >= 0)
             {
                 BundleMajorVersion = 6u;
                 DefaultOptions = BundleOptions.None;
@@ -110,6 +115,7 @@ namespace Microsoft.NET.HostModel.Bundle
         public bool ShouldExclude(string relativePath) =>
             (FrameworkVersion.Major != 3) && (relativePath.Equals(HostFxr) || relativePath.Equals(HostPolicy));
 
+        private readonly Version net80 = new Version(8, 0);
         private readonly Version net60 = new Version(6, 0);
         private readonly Version net50 = new Version(5, 0);
         private string HostFxr => IsWindows ? "hostfxr.dll" : IsLinux ? "libhostfxr.so" : "libhostfxr.dylib";
