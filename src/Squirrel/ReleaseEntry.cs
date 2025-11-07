@@ -372,7 +372,7 @@ namespace Squirrel
         /// Given a list of releases and a specified release package, returns the release package
         /// directly previous to the specified version.
         /// </summary>
-        internal static ReleasePackage GetPreviousRelease(IEnumerable<ReleaseEntry> releaseEntries, IReleasePackage package, string targetDir)
+        public static ReleasePackage GetPreviousRelease(IEnumerable<ReleaseEntry> releaseEntries, IReleasePackage package, string targetDir)
         {
             if (releaseEntries == null || !releaseEntries.Any()) return null;
             return releaseEntries

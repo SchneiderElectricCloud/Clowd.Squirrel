@@ -4,7 +4,7 @@ using System.IO.Compression;
 
 namespace Squirrel
 {
-    internal sealed class BZip2Stream : Stream
+    public sealed class BZip2Stream : Stream
     {
         private readonly Stream stream;
         private bool isDisposed;

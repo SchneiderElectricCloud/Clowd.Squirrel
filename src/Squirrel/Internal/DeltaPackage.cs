@@ -14,13 +14,13 @@ using System.Runtime.InteropServices;
 
 namespace Squirrel
 {
-    internal interface IDeltaPackageBuilder
+    public interface IDeltaPackageBuilder
     {
         ReleasePackage CreateDeltaPackage(ReleasePackage basePackage, ReleasePackage newPackage, string outputFile);
         ReleasePackage ApplyDeltaPackage(ReleasePackage basePackage, ReleasePackage deltaPackage, string outputFile);
     }
 
-    internal class DeltaPackageBuilder : IEnableLogger, IDeltaPackageBuilder
+    public class DeltaPackageBuilder : IEnableLogger, IDeltaPackageBuilder
     {
         readonly string localAppDirectory;
         public DeltaPackageBuilder(string localAppDataOverride = null)

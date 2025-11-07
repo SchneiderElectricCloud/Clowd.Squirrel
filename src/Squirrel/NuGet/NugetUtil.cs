@@ -7,7 +7,7 @@ using System.Xml.Linq;
 
 namespace Squirrel.NuGet
 {
-    internal static class NugetUtil
+    public static class NugetUtil
     {
         public static readonly string PackageExtension = ".nupkg";
         public static readonly string ManifestExtension = ".nuspec";

@@ -8,7 +8,7 @@ namespace Squirrel.Lib
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal class ResourceReader : IDisposable
+    public class ResourceReader : IDisposable
     {
         private IntPtr hModule;
         const uint LOAD_LIBRARY_AS_DATAFILE = 2;

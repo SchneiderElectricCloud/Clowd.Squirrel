@@ -14,7 +14,7 @@ namespace Squirrel
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal static class HelperExe
+    public static class HelperExe
     {
         public static string SetupPath => FindHelperFile("Setup.exe");
         public static string UpdatePath(Func<string, bool> predicate) => FindHelperFile("Update.exe", predicate);

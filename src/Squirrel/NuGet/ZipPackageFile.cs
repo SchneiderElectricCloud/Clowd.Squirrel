@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Squirrel.NuGet
 {
-    internal interface IPackageFile : IFrameworkTargetable
+    public interface IPackageFile : IFrameworkTargetable
     {
         Uri Key { get; }
         string Path { get; }
@@ -16,7 +16,7 @@ namespace Squirrel.NuGet
         //Stream GetEntryStream(Stream archiveStream);
     }
 
-    internal class ZipPackageFile : IPackageFile, IEquatable<ZipPackageFile>
+    public class ZipPackageFile : IPackageFile, IEquatable<ZipPackageFile>
     {
         public Uri Key { get; }
         public string EffectivePath { get; }

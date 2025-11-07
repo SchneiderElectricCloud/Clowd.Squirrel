@@ -2,7 +2,7 @@
 {
     using System;
 
-    internal class ApplyReleasesProgress : Progress<int>
+    public class ApplyReleasesProgress : Progress<int>
     {
         private readonly int _releasesToApply;
         private int _appliedReleases;

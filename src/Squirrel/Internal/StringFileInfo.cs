@@ -14,7 +14,7 @@ namespace Squirrel
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal class StringFileInfo
+    public class StringFileInfo
     {
         [DllImport("version.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern int GetFileVersionInfoSize(string lptstrFilename, out int lpdwHandle);

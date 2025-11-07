@@ -12,7 +12,7 @@ namespace Squirrel
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal static class SquirrelAwareExecutableDetector
+    public static class SquirrelAwareExecutableDetector
     {
         const string SQUIRREL_AWARE_KEY = "SquirrelAwareVersion";
 

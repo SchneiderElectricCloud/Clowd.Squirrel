@@ -404,7 +404,7 @@ namespace Squirrel
         /// <param name="stepStartPercentage">The start percentage of the range the current step represents.</param>
         /// <param name="stepEndPercentage">The end percentage of the range the current step represents.</param>
         /// <returns>The calculated percentage that can be reported about the total progress.</returns>
-        internal static int CalculateProgress(int percentageOfCurrentStep, int stepStartPercentage, int stepEndPercentage)
+        public static int CalculateProgress(int percentageOfCurrentStep, int stepStartPercentage, int stepEndPercentage)
         {
             // Ensure we are between 0 and 100
             percentageOfCurrentStep = Math.Max(Math.Min(percentageOfCurrentStep, 100), 0);

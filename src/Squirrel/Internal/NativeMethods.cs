@@ -8,7 +8,7 @@ namespace Squirrel
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal static class NativeMethods
+    public static class NativeMethods
     {
         public static int GetParentProcessId()
         {
@@ -102,29 +102,29 @@ namespace Squirrel
             [In][MarshalAs(UnmanagedType.U4)] ref int nSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern IntPtr OpenProcess(
+        public static extern IntPtr OpenProcess(
             ProcessAccess processAccess,
             bool bInheritHandle,
             int processId);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool CloseHandle(IntPtr hHandle);
+        public static extern bool CloseHandle(IntPtr hHandle);
 
         [DllImport("NTDLL.DLL", SetLastError = true)]
         internal static extern int NtQueryInformationProcess(IntPtr hProcess, PROCESSINFOCLASS pic, ref PROCESS_BASIC_INFORMATION pbi, int cb, out int pSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
+        public static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
 
         [DllImport("kernel32.dll", EntryPoint = "GetStdHandle")]
-        internal static extern IntPtr GetStdHandle(StandardHandles nStdHandle);
+        public static extern IntPtr GetStdHandle(StandardHandles nStdHandle);
 
         [DllImport("kernel32.dll", EntryPoint = "AllocConsole")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool AllocConsole();
+        public static extern bool AllocConsole();
 
         [DllImport("kernel32.dll")]
-        internal static extern bool AttachConsole(int pid);
+        public static extern bool AttachConsole(int pid);
 
         [DllImport("Kernel32.dll", SetLastError = true)]
         internal static extern IntPtr BeginUpdateResource(string pFileName, bool bDeleteExistingResources);
@@ -195,7 +195,7 @@ namespace Squirrel
     }
 
     [Flags]
-    internal enum ProcessAccess : uint
+    public enum ProcessAccess : uint
     {
         All = 0x001F0FFF,
         Terminate = 0x00000001,
@@ -289,7 +289,7 @@ namespace Squirrel
         }
     }
 
-    internal enum StandardHandles : int
+    public enum StandardHandles : int
     {
         STD_INPUT_HANDLE = -10,
         STD_OUTPUT_HANDLE = -11,

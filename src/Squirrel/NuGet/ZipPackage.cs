@@ -9,7 +9,7 @@ using System.Xml.Linq;
 
 namespace Squirrel.NuGet
 {
-    internal interface IPackage
+    public interface IPackage
     {
         string Id { get; }
         string ProductName { get; }
@@ -30,7 +30,7 @@ namespace Squirrel.NuGet
         RuntimeCpu MachineArchitecture { get; }
     }
 
-    internal class ZipPackage : IPackage
+    public class ZipPackage : IPackage
     {
         public string ProductName => Title ?? Id;
         public string ProductDescription => Description ?? Summary ?? Title ?? Id;

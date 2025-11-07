@@ -6,7 +6,7 @@ using Squirrel.SimpleSplat;
 
 namespace Squirrel
 {
-    internal sealed class SingleGlobalInstance : IDisposable, IEnableLogger
+    public sealed class SingleGlobalInstance : IDisposable, IEnableLogger
     {
         IDisposable handle = null;
 

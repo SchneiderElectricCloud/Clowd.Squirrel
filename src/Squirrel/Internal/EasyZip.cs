@@ -10,7 +10,7 @@ using Squirrel.SimpleSplat;
 
 namespace Squirrel
 {
-    internal static class EasyZip
+    public static class EasyZip
     {
         private static IFullLogger Log = SquirrelLocator.CurrentMutable.GetService<ILogManager>().GetLogger(typeof(EasyZip));
 

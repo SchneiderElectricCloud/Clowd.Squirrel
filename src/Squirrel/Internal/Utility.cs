@@ -16,7 +16,7 @@ using System.Net;
 
 namespace Squirrel
 {
-    internal static class Utility
+    public static class Utility
     {
         public static string RemoveByteOrderMarkerIfPresent(string content)
         {
