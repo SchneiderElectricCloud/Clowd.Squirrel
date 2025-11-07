@@ -60,8 +60,8 @@ namespace SquirrelCli
                 { "releasify", "Take an existing nuget package and convert it into a Squirrel release", new ReleasifyOptions(), Releasify },
                 "",
                 "[ Package Deployment / Syncing ]",
-                { "b2-down", "Download recent releases from BackBlaze B2", new SyncBackblazeOptions(), o => Download(new BackblazeRepository(o)) },
-                { "b2-up", "Upload releases to BackBlaze B2", new SyncBackblazeOptions(), o => Upload(new BackblazeRepository(o)) },
+                //{ "b2-down", "Download recent releases from BackBlaze B2", new SyncBackblazeOptions(), o => Download(new BackblazeRepository(o)) },
+                //{ "b2-up", "Upload releases to BackBlaze B2", new SyncBackblazeOptions(), o => Upload(new BackblazeRepository(o)) },
                 { "http-down", "Download recent releases from an HTTP source", new SyncHttpOptions(), o => Download(new SimpleWebRepository(o)) },
                 { "github-down", "Download recent releases from GitHub", new SyncGithubOptions(), o => Download(new GitHubRepository(o)) },
                 { "s3-down", "Download recent releases from a S3 bucket", new SyncS3Options(), o => Download(new S3Repository(o)) },
@@ -72,23 +72,30 @@ namespace SquirrelCli
                 //$"        ",
             };
 
-            try {
+            try
+            {
                 globalOptions.Parse(args);
 
-                if (verbose) {
+                if (verbose)
+                {
                     logger.Level = LogLevel.Debug;
                 }
 
-                if (help) {
+                if (help)
+                {
                     commands.WriteHelp();
                     return 0;
-                } else {
+                }
+                else
+                {
                     // parse cli and run command
                     commands.Execute(args);
                 }
 
                 return 0;
-            } catch (Exception ex) when (ex is OptionValidationException || ex is OptionException) {
+            }
+            catch (Exception ex) when (ex is OptionValidationException || ex is OptionException)
+            {
                 // if the arguments fail to validate, print argument help
                 Console.WriteLine();
                 logger.Write(ex.Message, LogLevel.Error);
@@ -96,7 +103,9 @@ namespace SquirrelCli
                 Console.WriteLine();
                 logger.Write(ex.Message, LogLevel.Error);
                 return -1;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 // for other errors, just print the error and short usage instructions
                 Console.WriteLine();
                 logger.Write(ex.ToString(), LogLevel.Error);
@@ -119,7 +128,8 @@ namespace SquirrelCli
                 ? "" // no releaseNotes
                 : $"<releaseNotes>{SecurityElement.Escape(File.ReadAllText(options.releaseNotes))}</releaseNotes>";
 
-            using (Utility.WithTempDirectory(out var tmpDir)) {
+            using (Utility.WithTempDirectory(out var tmpDir))
+            {
                 string nuspec = $@"
 <?xml version=""1.0"" encoding=""utf-8""?>
 <package>
@@ -153,7 +163,8 @@ namespace SquirrelCli
         static void Releasify(ReleasifyOptions options)
         {
             var targetDir = options.releaseDir ?? Path.Combine(".", "Releases");
-            if (!Directory.Exists(targetDir)) {
+            if (!Directory.Exists(targetDir))
+            {
                 Directory.CreateDirectory(targetDir);
             }
 
@@ -176,9 +187,12 @@ namespace SquirrelCli
             // update icon for Update.exe if requested
             var bundledUpdatePath = HelperExe.UpdatePath(p => Microsoft.NET.HostModel.AppHost.HostWriter.IsBundle(p, out var _hz));
             var updatePath = Path.Combine(tempDir, "Update.exe");
-            if (setupIcon != null) {
+            if (setupIcon != null)
+            {
                 DotnetUtil.UpdateSingleFileBundleIcon(bundledUpdatePath, updatePath, setupIcon).Wait();
-            } else {
+            }
+            else
+            {
                 File.Copy(bundledUpdatePath, updatePath, true);
             }
 
@@ -200,15 +214,18 @@ namespace SquirrelCli
 
             var releaseFilePath = Path.Combine(di.FullName, "RELEASES");
             var previousReleases = new List<ReleaseEntry>();
-            if (File.Exists(releaseFilePath)) {
+            if (File.Exists(releaseFilePath))
+            {
                 previousReleases.AddRange(ReleaseEntry.ParseReleaseFile(File.ReadAllText(releaseFilePath, Encoding.UTF8)));
             }
 
-            foreach (var file in toProcess) {
+            foreach (var file in toProcess)
+            {
                 Log.Info("Creating release for package: " + file.FullName);
 
                 var rp = new ReleasePackage(file.FullName);
-                rp.CreateReleasePackage(Path.Combine(di.FullName, rp.SuggestedReleaseFileName), contentsPostProcessHook: (pkgPath, zpkg) => {
+                rp.CreateReleasePackage(Path.Combine(di.FullName, rp.SuggestedReleaseFileName), contentsPostProcessHook: (pkgPath, zpkg) =>
+                {
                     var nuspecPath = Directory.GetFiles(pkgPath, "*.nuspec", SearchOption.TopDirectoryOnly)
                         .ContextualSingle("package", "*.nuspec", "top level directory");
                     var libDir = Directory.GetDirectories(Path.Combine(pkgPath, "lib"))
@@ -218,7 +235,8 @@ namespace SquirrelCli
 
                     // unless the validation has been disabled, do not allow the creation of packages
                     // without a SquirrelAwareApp inside
-                    if (!options.allowUnaware && !awareExes.Any()) {
+                    if (!options.allowUnaware && !awareExes.Any())
+                    {
                         throw new ArgumentException(
                             "There are no SquirreAwareApp's in the provided package. Please mark an exe " +
                             "as aware using the assembly manifest, or use the '--allowUnaware' argument " +
@@ -234,7 +252,8 @@ namespace SquirrelCli
                         .ForEach(f => Log.Warn($"File path in package exceeds 200 characters ({f.Length}) and may cause issues on Windows: '{f}'."));
 
                     // fail the release if this is a clickonce application
-                    if (Directory.EnumerateFiles(libDir, "*.application").Any(f => File.ReadAllText(f).Contains("clickonce"))) {
+                    if (Directory.EnumerateFiles(libDir, "*.application").Any(f => File.ReadAllText(f).Contains("clickonce")))
+                    {
                         throw new ArgumentException(
                             "Squirrel does not support building releases for ClickOnce applications. " +
                             "Please publish your application to a folder without ClickOnce.");
@@ -242,15 +261,19 @@ namespace SquirrelCli
 
                     // warning if the installed SquirrelLib version is not the same as Squirrel.exe
                     StringFileInfo sqLib = null;
-                    try {
+                    try
+                    {
                         var myFileVersion = new SemanticVersion(FileVersion).Version;
                         sqLib = Directory.EnumerateFiles(libDir, "SquirrelLib.dll")
                             .Select(f => { StringFileInfo.ReadVersionInfo(f, out var fi); return fi; })
                             .FirstOrDefault(fi => fi.FileVersion != myFileVersion);
-                    } catch (Exception ex) {
+                    }
+                    catch (Exception ex)
+                    {
                         Log.WarnException("Error validating SquirrelLib version in package.", ex);
                     }
-                    if (sqLib != null) {
+                    if (sqLib != null)
+                    {
                         Log.Warn(
                             $"SquirrelLib.dll {sqLib.FileVersion} is installed in provided package, " +
                             $"but current Squirrel.exe version is {DisplayVersion} ({FileVersion}). " +
@@ -264,7 +287,7 @@ namespace SquirrelCli
                     // record architecture of squirrel aware binaries so setup can fast fail if unsupported
                     RuntimeCpu parseMachine(PeNet.Header.Pe.MachineType machine)
                     {
-                        Utility.TryParseEnumU16<RuntimeCpu>((ushort) machine, out var cpu);
+                        Utility.TryParseEnumU16<RuntimeCpu>((ushort)machine, out var cpu);
                         return cpu;
                     }
 
@@ -273,12 +296,16 @@ namespace SquirrelCli
                                  let arch = parseMachine(machine)
                                  select new { Name = Path.GetFileName(pe.Key), Architecture = arch };
 
-                    if (awareExes.Count > 0) {
+                    if (awareExes.Count > 0)
+                    {
                         Log.Info($"There are {awareExes.Count} SquirrelAwareApp's. Binaries will be executed during install/update/uninstall hooks.");
-                        foreach (var pe in peArch) {
+                        foreach (var pe in peArch)
+                        {
                             Log.Info($"  Detected SquirrelAwareApp '{pe.Name}' (arch: {pe.Architecture})");
                         }
-                    } else {
+                    }
+                    else
+                    {
                         Log.Warn("There are no SquirrelAwareApp's. No hooks will be executed during install/update/uninstall. " +
                             "Shortcuts will be created for every binary in package.");
                     }
@@ -314,23 +341,29 @@ namespace SquirrelCli
 
                     // copy app icon to 'lib/fx/app.ico'
                     var iconTarget = Path.Combine(libDir, "app.ico");
-                    if (options.appIcon != null) {
+                    if (options.appIcon != null)
+                    {
 
                         // icon was specified on the command line
                         Log.Info("Using app icon from command line arguments");
                         File.Copy(options.appIcon, iconTarget, true);
 
-                    } else if (!File.Exists(iconTarget) && zpkg.IconUrl != null) {
+                    }
+                    else if (!File.Exists(iconTarget) && zpkg.IconUrl != null)
+                    {
 
                         // icon was provided in the nuspec. download it and possibly convert it from a different image format
                         Log.Info($"Downloading app icon from '{zpkg.IconUrl}'.");
                         var fd = Utility.CreateDefaultDownloader();
                         var imgBytes = fd.DownloadBytes(zpkg.IconUrl.ToString()).Result;
-                        if (zpkg.IconUrl.AbsolutePath.EndsWith(".ico")) {
+                        if (zpkg.IconUrl.AbsolutePath.EndsWith(".ico"))
+                        {
                             File.WriteAllBytes(iconTarget, imgBytes);
-                        } else {
+                        }
+                        else
+                        {
                             using var imgStream = new MemoryStream(imgBytes);
-                            using var bmp = (Bitmap) Image.FromStream(imgStream);
+                            using var bmp = (Bitmap)Image.FromStream(imgStream);
                             using var ico = Icon.FromHandle(bmp.GetHicon());
                             using var fs = File.Open(iconTarget, FileMode.Create, FileAccess.Write);
                             ico.Save(fs);
@@ -345,7 +378,8 @@ namespace SquirrelCli
                 processed.Add(rp.ReleasePackageFile);
 
                 var prev = ReleaseEntry.GetPreviousRelease(previousReleases, rp, targetDir);
-                if (prev != null && generateDeltas) {
+                if (prev != null && generateDeltas)
+                {
                     var deltaBuilder = new DeltaPackageBuilder();
                     var dp = deltaBuilder.CreateDeltaPackage(prev, rp,
                         Path.Combine(di.FullName, rp.SuggestedReleaseFileName.Replace("full", "delta")));
@@ -353,7 +387,8 @@ namespace SquirrelCli
                 }
             }
 
-            foreach (var file in toProcess) {
+            foreach (var file in toProcess)
+            {
                 File.Delete(file.FullName);
             }
 
@@ -381,12 +416,14 @@ namespace SquirrelCli
             Log.Info($"Setup bundle created at '{targetSetupExe}'.");
 
             // this option is used for debugging a local Setup.exe
-            if (options.debugSetupExe != null) {
+            if (options.debugSetupExe != null)
+            {
                 File.Copy(targetSetupExe, options.debugSetupExe, true);
                 Log.Warn($"DEBUG OPTION: Setup bundle copied on top of '{options.debugSetupExe}'. Recompile before creating a new bundle.");
             }
 
-            if (!String.IsNullOrEmpty(options.msi)) {
+            if (!String.IsNullOrEmpty(options.msi))
+            {
                 bool x64 = options.msi.Equals("x64");
                 var msiPath = createMsiPackage(targetSetupExe, bundledzp, x64).Result;
                 options.SignPEFile(msiPath);
@@ -425,7 +462,8 @@ namespace SquirrelCli
 
             // NB: We need some GUIDs that are based on the package ID, but unique (i.e.
             // "Unique but consistent").
-            for (int i = 1; i <= 10; i++) {
+            for (int i = 1; i <= 10; i++)
+            {
                 templateData[String.Format("IdAsGuid{0}", i)] = Utility.CreateGuidFromHash(String.Format("{0}:{1}", package.Id, i)).ToString();
             }
 
@@ -434,30 +472,37 @@ namespace SquirrelCli
             var wxsTarget = Path.Combine(setupExeDir, setupName + ".wxs");
             File.WriteAllText(wxsTarget, templateResult, Encoding.UTF8);
 
-            try {
+            try
+            {
                 var msiTarget = Path.Combine(setupExeDir, setupName + "_DeploymentTool.msi");
                 await HelperExe.CompileWixTemplateToMsi(wxsTarget, msiTarget);
                 return msiTarget;
-            } finally {
+            }
+            finally
+            {
                 File.Delete(wxsTarget);
             }
         }
 
         static void createExecutableStubForExe(string exeToCopy)
         {
-            try {
+            try
+            {
                 var target = Path.Combine(
                     Path.GetDirectoryName(exeToCopy),
                     Path.GetFileNameWithoutExtension(exeToCopy) + "_ExecutionStub.exe");
 
                 Utility.Retry(() => File.Copy(HelperExe.StubExecutablePath, target, true));
 
-                Utility.Retry(() => {
+                Utility.Retry(() =>
+                {
                     using var writer = new Microsoft.NET.HostModel.ResourceUpdater(target, true);
                     writer.AddResourcesFromPEImage(exeToCopy);
                     writer.Update();
                 });
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Log.ErrorException($"Error creating StubExecutable and copying resources for '{exeToCopy}'. This stub may or may not work properly.", ex);
             }
         }
@@ -473,19 +518,26 @@ namespace SquirrelCli
 
         public void Write(string message, LogLevel logLevel)
         {
-            if (logLevel < Level) {
+            if (logLevel < Level)
+            {
                 return;
             }
 
             message = message.Replace(localAppData, "%localappdata%", StringComparison.InvariantCultureIgnoreCase);
 
-            lock (gate) {
+            lock (gate)
+            {
                 string lvl = logLevel.ToString().Substring(0, 4).ToUpper();
-                if (logLevel == LogLevel.Error || logLevel == LogLevel.Fatal) {
+                if (logLevel == LogLevel.Error || logLevel == LogLevel.Fatal)
+                {
                     Utility.ConsoleWriteWithColor($"[{lvl}] {message}{Environment.NewLine}", ConsoleColor.Red);
-                } else if (logLevel == LogLevel.Warn) {
+                }
+                else if (logLevel == LogLevel.Warn)
+                {
                     Utility.ConsoleWriteWithColor($"[{lvl}] {message}{Environment.NewLine}", ConsoleColor.Yellow);
-                } else {
+                }
+                else
+                {
                     Console.WriteLine($"[{lvl}] {message}");
                 }
             }
