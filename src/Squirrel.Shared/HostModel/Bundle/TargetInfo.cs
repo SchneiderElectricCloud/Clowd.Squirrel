@@ -37,12 +37,7 @@ namespace Microsoft.NET.HostModel.Bundle
 
             Debug.Assert(IsLinux || IsOSX || IsWindows);
 
-            if (FrameworkVersion.CompareTo(net80) >= 0)
-            {
-                BundleMajorVersion = 8u;
-                DefaultOptions = BundleOptions.None;
-            }
-            else if (FrameworkVersion.CompareTo(net60) >= 0)
+            if (FrameworkVersion.CompareTo(net60) >= 0)
             {
                 BundleMajorVersion = 6u;
                 DefaultOptions = BundleOptions.None;
