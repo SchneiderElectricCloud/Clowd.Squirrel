@@ -169,7 +169,7 @@ namespace SquirrelCli
                 BundleOptions.EnableCompression,
                 OSPlatform.Windows,
                 Architecture.X86,
-                new Version(8, 0),
+                new Version(6, 0),
                 false,
                 sourceName
             );
