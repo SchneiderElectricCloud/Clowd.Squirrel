@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Squirrel
 {
-    internal static class EnumerableExtensions
+    public static class EnumerableExtensions
     {
         public static IEnumerable<T> Return<T>(T value)
         {
@@ -20,9 +20,11 @@ namespace Squirrel
         public static T ContextualSingle<T>(this IEnumerable<T> source, string strIs, string strWhat, string strIn = null)
         {
             T result;
-            using (var e = source.GetEnumerator()) {
+            using (var e = source.GetEnumerator())
+            {
                 // enumerator starts before the first element. If MoveNext is false there were no elements
-                if (!e.MoveNext()) {
+                if (!e.MoveNext())
+                {
                     throw new InvalidOperationException(
                         $"Invalid {strIs}: One {strWhat} expected" +
                         (strIn == null ? "." : $" in {strIn}.") +
@@ -33,7 +35,8 @@ namespace Squirrel
                 result = e.Current;
 
                 // if MoveNext returns true twice, there were at least 2 elements, so we should also throw.
-                if (e.MoveNext()) {
+                if (e.MoveNext())
+                {
                     throw new InvalidOperationException(
                         $"Invalid {strIs}: Only a single {strWhat} expected" +
                         (strIn == null ? "." : $" in {strIn}.") +
@@ -99,21 +102,26 @@ namespace Squirrel
         {
             var result = new List<TSource>();
 
-            using (var e = source.GetEnumerator()) {
+            using (var e = source.GetEnumerator())
+            {
                 if (!e.MoveNext()) throw new InvalidOperationException("Source sequence doesn't contain any elements.");
 
                 var current = e.Current;
                 var resKey = keySelector(current);
                 result.Add(current);
 
-                while (e.MoveNext()) {
+                while (e.MoveNext())
+                {
                     var cur = e.Current;
                     var key = keySelector(cur);
 
                     var cmp = compare(key, resKey);
-                    if (cmp == 0) {
+                    if (cmp == 0)
+                    {
                         result.Add(cur);
-                    } else if (cmp > 0) {
+                    }
+                    else if (cmp > 0)
+                    {
                         result = new List<TSource> { cur };
                         resKey = key;
                     }

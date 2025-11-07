@@ -6,7 +6,7 @@ namespace Squirrel.Lib
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal static class AuthenticodeTools
+    public static class AuthenticodeTools
     {
         [DllImport("Wintrust.dll", PreserveSig = true, SetLastError = false)]
         static extern uint WinVerifyTrust(IntPtr hWnd, IntPtr pgActionID, IntPtr pWinTrustData);
@@ -18,7 +18,8 @@ namespace Squirrel.Lib
             uint result = 0;
             using (WINTRUST_FILE_INFO fileInfo = new WINTRUST_FILE_INFO(fileName, Guid.Empty))
             using (UnmanagedPointer guidPtr = new UnmanagedPointer(Marshal.AllocHGlobal(Marshal.SizeOf(typeof(Guid))), AllocMethod.HGlobal))
-            using (UnmanagedPointer wvtDataPtr = new UnmanagedPointer(Marshal.AllocHGlobal(Marshal.SizeOf(typeof(WINTRUST_DATA))), AllocMethod.HGlobal)) {
+            using (UnmanagedPointer wvtDataPtr = new UnmanagedPointer(Marshal.AllocHGlobal(Marshal.SizeOf(typeof(WINTRUST_DATA))), AllocMethod.HGlobal))
+            {
                 WINTRUST_DATA data = new WINTRUST_DATA(fileInfo);
                 IntPtr pGuid = guidPtr;
                 IntPtr pData = wvtDataPtr;
@@ -42,13 +43,16 @@ namespace Squirrel.Lib
         public WINTRUST_FILE_INFO(string fileName, Guid subject)
         {
 
-            cbStruct = (uint) Marshal.SizeOf(typeof(WINTRUST_FILE_INFO));
+            cbStruct = (uint)Marshal.SizeOf(typeof(WINTRUST_FILE_INFO));
             pcwszFilePath = fileName;
 
-            if (subject != Guid.Empty) {
+            if (subject != Guid.Empty)
+            {
                 pgKnownSubject = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(Guid)));
                 Marshal.StructureToPtr(subject, pgKnownSubject, true);
-            } else {
+            }
+            else
+            {
                 pgKnownSubject = IntPtr.Zero;
             }
 
@@ -71,7 +75,8 @@ namespace Squirrel.Lib
 
         void Dispose(bool disposing)
         {
-            if (pgKnownSubject != IntPtr.Zero) {
+            if (pgKnownSubject != IntPtr.Zero)
+            {
                 Marshal.DestroyStructure(this.pgKnownSubject, typeof(Guid));
                 Marshal.FreeHGlobal(this.pgKnownSubject);
             }
@@ -138,7 +143,7 @@ namespace Squirrel.Lib
     {
         public WINTRUST_DATA(WINTRUST_FILE_INFO fileInfo)
         {
-            this.cbStruct = (uint) Marshal.SizeOf(typeof(WINTRUST_DATA));
+            this.cbStruct = (uint)Marshal.SizeOf(typeof(WINTRUST_DATA));
             pInfoStruct = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(WINTRUST_FILE_INFO)));
 
             Marshal.StructureToPtr(fileInfo, pInfoStruct, false);
@@ -179,7 +184,8 @@ namespace Squirrel.Lib
 
         void Dispose(bool disposing)
         {
-            if (dwUnionChoice == UnionChoice.File) {
+            if (dwUnionChoice == UnionChoice.File)
+            {
                 WINTRUST_FILE_INFO info = new WINTRUST_FILE_INFO();
                 Marshal.PtrToStructure(pInfoStruct, info);
 
@@ -210,17 +216,22 @@ namespace Squirrel.Lib
 
         void Dispose(bool disposing)
         {
-            if (m_ptr != IntPtr.Zero) {
-                if (m_meth == AllocMethod.HGlobal) {
+            if (m_ptr != IntPtr.Zero)
+            {
+                if (m_meth == AllocMethod.HGlobal)
+                {
                     Marshal.FreeHGlobal(m_ptr);
-                } else if (m_meth == AllocMethod.CoTaskMem) {
+                }
+                else if (m_meth == AllocMethod.CoTaskMem)
+                {
                     Marshal.FreeCoTaskMem(m_ptr);
                 }
 
                 m_ptr = IntPtr.Zero;
             }
 
-            if (disposing) {
+            if (disposing)
+            {
                 GC.SuppressFinalize(this);
             }
         }

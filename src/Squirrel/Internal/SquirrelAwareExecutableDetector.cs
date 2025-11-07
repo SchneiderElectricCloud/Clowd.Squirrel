@@ -12,7 +12,7 @@ namespace Squirrel
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal static class SquirrelAwareExecutableDetector
+    public static class SquirrelAwareExecutableDetector
     {
         const string SQUIRREL_AWARE_KEY = "SquirrelAwareVersion";
 
@@ -42,19 +42,25 @@ namespace Squirrel
                 GetSideBySideDllManifestSquirrelAwareValue,
             };
 
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 3; i++)
+            {
                 bool error = false;
-                foreach (var fn in detectors) {
-                    try {
+                foreach (var fn in detectors)
+                {
+                    try
+                    {
                         var v = fn(exePath);
                         if (v != null) return v;
-                    } catch {
+                    }
+                    catch
+                    {
                         error = true;
                         // do not throw, otherwise other detectors will not run
                     }
                 }
 
-                if (!error) {
+                if (!error)
+                {
                     // we tried all the detectors and none of them threw, so we don't need to retry
                     break;
                 }
@@ -71,7 +77,7 @@ namespace Squirrel
             return StringFileInfo.ReadVersionInfo(executable, out var vi)
                 .Where(i => i.Key == SQUIRREL_AWARE_KEY)
                 .Where(i => int.TryParse(i.Value, out var _))
-                .Select(i => (int?) int.Parse(i.Value))
+                .Select(i => (int?)int.Parse(i.Value))
                 .FirstOrDefault(i => i > 0);
         }
 
@@ -80,9 +86,11 @@ namespace Squirrel
             // Looks for a "MyApp.exe.squirrel" sidecar file
             // the file should contain just the integer version (eg. "1")
             var sidecarPath = executable + ".squirrel";
-            if (File.Exists(sidecarPath)) {
+            if (File.Exists(sidecarPath))
+            {
                 var txt = File.ReadAllText(sidecarPath);
-                if (int.TryParse(txt, out var pv)) {
+                if (int.TryParse(txt, out var pv))
+                {
                     return pv;
                 }
             }
@@ -93,7 +101,8 @@ namespace Squirrel
         {
             // Looks for an external application manifest eg. "MyApp.exe.manifest"
             var manifestPath = executable + ".manifest";
-            if (File.Exists(manifestPath)) {
+            if (File.Exists(manifestPath))
+            {
                 return ParseManifestAwareValue(File.ReadAllBytes(manifestPath));
             }
             return null;
@@ -105,7 +114,8 @@ namespace Squirrel
             var manifestPath = Path.Combine(
                 Path.GetDirectoryName(executable),
                 Path.GetFileNameWithoutExtension(executable) + ".dll.manifest");
-            if (File.Exists(manifestPath)) {
+            if (File.Exists(manifestPath))
+            {
                 return ParseManifestAwareValue(File.ReadAllBytes(manifestPath));
             }
             return null;
@@ -127,7 +137,8 @@ namespace Squirrel
 
             var document = XDocument.Load(new MemoryStream(buffer));
             var aware = document.Root.ElementsNoNamespace(SQUIRREL_AWARE_KEY).FirstOrDefault();
-            if (aware != null && int.TryParse(aware.Value, out var pv)) {
+            if (aware != null && int.TryParse(aware.Value, out var pv))
+            {
                 return pv;
             }
 

@@ -14,7 +14,7 @@ namespace Squirrel
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal class StringFileInfo
+    public class StringFileInfo
     {
         [DllImport("version.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern int GetFileVersionInfoSize(string lptstrFilename, out int lpdwHandle);
@@ -70,14 +70,16 @@ namespace Squirrel
             int num;
             int size = GetFileVersionInfoSize(fileName, out num);
 
-            if (size == 0) {
+            if (size == 0)
+            {
                 throw new Win32Exception();
             }
 
             var buffer = new byte[size];
             bool success = GetFileVersionInfo(fileName, 0, size, buffer);
 
-            if (!success) {
+            if (!success)
+            {
                 throw new Win32Exception();
             }
 
@@ -95,15 +97,18 @@ namespace Squirrel
             // The offset calculated here is unused
             var fibs = ReadFileInfoBaseStruct(buffer, 0, out offset);
 
-            if (fibs.Key != "VS_VERSION_INFO") {
+            if (fibs.Key != "VS_VERSION_INFO")
+            {
                 throw new Exception(fibs.Key);
             }
 
             // Value = VS_FIXEDFILEINFO
-            if (fibs.ValueLength != 0) {
+            if (fibs.ValueLength != 0)
+            {
                 uint signature = BitConverter.ToUInt32(buffer, fibs.ValueOffset);
 
-                if (signature != 0xFEEF04BD) {
+                if (signature != 0xFEEF04BD)
+                {
                     throw new Exception(signature.ToString("X8"));
                 }
 
@@ -121,11 +126,13 @@ namespace Squirrel
                 uint fileDateMS = BitConverter.ToUInt32(buffer, fibs.ValueOffset + 44);
                 uint fileDateLS = BitConverter.ToUInt32(buffer, fibs.ValueOffset + 48);
                 DateTime? fileDate = fileDateMS != 0 || fileDateLS != 0 ?
-                    (DateTime?) DateTime.FromFileTime((long) fileDateMS << 32 | fileDateLS) :
+                    (DateTime?)DateTime.FromFileTime((long)fileDateMS << 32 | fileDateLS) :
                     null;
 
                 vi = new StringFileInfo(fileVersion, productVersion, fileFlagsMask, fileFlags, fileOS, fileType, fileSubtype, fileDate);
-            } else {
+            }
+            else
+            {
                 vi = null;
             }
 
@@ -136,15 +143,18 @@ namespace Squirrel
         {
             int sfiOrValOffset = (fibs.ValueOffset + fibs.ValueLength + 3) & (~3);
 
-            while (sfiOrValOffset < fibs.Length) {
+            while (sfiOrValOffset < fibs.Length)
+            {
                 int nextSfiOrValOffset;
 
                 var sfiOrVal = ReadFileInfoBaseStruct(buffer, sfiOrValOffset, out nextSfiOrValOffset);
 
-                if (sfiOrVal.Key == "StringFileInfo") {
+                if (sfiOrVal.Key == "StringFileInfo")
+                {
                     int stOffset = sfiOrVal.ValueOffset;
 
-                    while (stOffset < sfiOrVal.EndOffset) {
+                    while (stOffset < sfiOrVal.EndOffset)
+                    {
                         int nextStOffset;
 
                         var st = ReadFileInfoBaseStruct(buffer, stOffset, out nextStOffset);
@@ -153,7 +163,8 @@ namespace Squirrel
 
                         int striOffset = st.ValueOffset;
 
-                        while (striOffset < st.EndOffset) {
+                        while (striOffset < st.EndOffset)
+                        {
                             int nextStriOffset;
 
                             var stri = ReadFileInfoBaseStruct(buffer, striOffset, out nextStriOffset);
@@ -169,25 +180,31 @@ namespace Squirrel
 
                         stOffset = nextStOffset;
                     }
-                } else if (sfiOrVal.Key == "VarFileInfo") {
+                }
+                else if (sfiOrVal.Key == "VarFileInfo")
+                {
                     int varOffset = sfiOrVal.ValueOffset;
 
-                    while (varOffset < sfiOrVal.EndOffset) {
+                    while (varOffset < sfiOrVal.EndOffset)
+                    {
                         int nextVarOffset;
 
                         var var = ReadFileInfoBaseStruct(buffer, varOffset, out nextVarOffset);
 
-                        if (var.Key != "Translation") {
+                        if (var.Key != "Translation")
+                        {
                             throw new Exception(var.Key);
                         }
 
                         int langOffset = var.ValueOffset;
 
-                        while (langOffset < var.EndOffset) {
-                            unchecked {
+                        while (langOffset < var.EndOffset)
+                        {
+                            unchecked
+                            {
                                 // We invert the order suggested by the Var description!
-                                uint high = (uint) BitConverter.ToInt16(buffer, langOffset);
-                                uint low = (uint) BitConverter.ToInt16(buffer, langOffset + 2);
+                                uint high = (uint)BitConverter.ToInt16(buffer, langOffset);
+                                uint low = (uint)BitConverter.ToInt16(buffer, langOffset + 2);
                                 uint lang = (high << 16) | low;
 
                                 langOffset += 4;
@@ -196,7 +213,9 @@ namespace Squirrel
 
                         varOffset = nextVarOffset;
                     }
-                } else {
+                }
+                else
+                {
                     Debug.WriteLine("Unrecognized " + sfiOrVal.Key);
                 }
 
@@ -206,7 +225,8 @@ namespace Squirrel
 
         protected static FileInfoBaseStruct ReadFileInfoBaseStruct(byte[] buffer, int offset, out int nextOffset)
         {
-            var fibs = new FileInfoBaseStruct {
+            var fibs = new FileInfoBaseStruct
+            {
                 Length = BitConverter.ToInt16(buffer, offset),
                 ValueLength = BitConverter.ToInt16(buffer, offset + 2),
                 Type = BitConverter.ToInt16(buffer, offset + 4)
@@ -227,7 +247,8 @@ namespace Squirrel
         protected static int FindLengthUnicodeSZ(byte[] buffer, int offset, int endOffset)
         {
             int offset2 = offset;
-            while (offset2 < endOffset && BitConverter.ToInt16(buffer, offset2) != 0) {
+            while (offset2 < endOffset && BitConverter.ToInt16(buffer, offset2) != 0)
+            {
                 offset2 += 2;
             }
 

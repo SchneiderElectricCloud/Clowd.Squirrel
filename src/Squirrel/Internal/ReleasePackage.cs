@@ -13,7 +13,7 @@ using System.IO.Compression;
 
 namespace Squirrel
 {
-    internal interface IReleasePackage
+    public interface IReleasePackage
     {
         string InputPackageFile { get; }
         string ReleasePackageFile { get; }
@@ -21,13 +21,14 @@ namespace Squirrel
         SemanticVersion Version { get; }
     }
 
-    internal class ReleasePackage : IEnableLogger, IReleasePackage
+    public class ReleasePackage : IEnableLogger, IReleasePackage
     {
         public ReleasePackage(string inputPackageFile, bool isReleasePackage = false)
         {
             InputPackageFile = inputPackageFile;
 
-            if (isReleasePackage) {
+            if (isReleasePackage)
+            {
                 ReleasePackageFile = inputPackageFile;
             }
         }
@@ -42,12 +43,13 @@ namespace Squirrel
 #if NET5_0_OR_GREATER
         [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-        internal string CreateReleasePackage(string outputFile, Func<string, string> releaseNotesProcessor = null, Action<string, ZipPackage> contentsPostProcessHook = null)
+        public string CreateReleasePackage(string outputFile, Func<string, string> releaseNotesProcessor = null, Action<string, ZipPackage> contentsPostProcessHook = null)
         {
             Contract.Requires(!String.IsNullOrEmpty(outputFile));
             releaseNotesProcessor = releaseNotesProcessor ?? (x => (new Markdown()).Transform(x));
 
-            if (ReleasePackageFile != null) {
+            if (ReleasePackageFile != null)
+            {
                 return ReleasePackageFile;
             }
 
@@ -59,14 +61,16 @@ namespace Squirrel
 
             // NB: Our test fixtures use packages that aren't SemVer compliant, 
             // we don't really care that they aren't valid
-            if (!ModeDetector.InUnitTestRunner()) {
+            if (!ModeDetector.InUnitTestRunner())
+            {
                 // verify that the .nuspec version is semver compliant
                 NugetUtil.ThrowIfVersionNotSemverCompliant(package.Version.ToString());
 
                 // verify that the suggested filename can be round-tripped as an assurance 
                 // someone won't run across an edge case and install a broken app somehow
                 var idtest = ReleaseEntry.ParseEntryFileName(SuggestedReleaseFileName);
-                if (idtest.PackageName != package.Id || idtest.Version != package.Version) {
+                if (idtest.PackageName != package.Id || idtest.Version != package.Version)
+                {
                     throw new Exception($"The package id/version could not be properly parsed, are you using special characters?");
                 }
             }
@@ -74,20 +78,24 @@ namespace Squirrel
             // we can tell from here what platform(s) the package targets but given this is a
             // simple package we only ever expect one entry here (crash hard otherwise)
             var frameworks = package.Frameworks;
-            if (frameworks.Count() > 1) {
+            if (frameworks.Count() > 1)
+            {
                 var platforms = frameworks
                     .Aggregate(new StringBuilder(), (sb, f) => sb.Append(f.ToString() + "; "));
 
                 throw new InvalidOperationException(String.Format(
                     "The input package file {0} targets multiple platforms - {1} - and cannot be transformed into a release package.", InputPackageFile, platforms));
 
-            } else if (!frameworks.Any()) {
+            }
+            else if (!frameworks.Any())
+            {
                 throw new InvalidOperationException(String.Format(
                     "The input package file {0} targets no platform and cannot be transformed into a release package.", InputPackageFile));
             }
 
             // CS - docs say we don't support dependencies. I can't think of any reason allowing this is useful.
-            if (package.DependencySets.Any()) {
+            if (package.DependencySets.Any())
+            {
                 throw new InvalidOperationException(String.Format(
                      "The input package file {0} must have no dependencies.", InputPackageFile));
             }
@@ -98,7 +106,8 @@ namespace Squirrel
 
             string tempPath = null;
 
-            using (Utility.WithTempDirectory(out tempPath, null)) {
+            using (Utility.WithTempDirectory(out tempPath, null))
+            {
                 var tempDir = new DirectoryInfo(tempPath);
 
                 extractZipWithEscaping(InputPackageFile, tempPath).Wait();
@@ -108,7 +117,8 @@ namespace Squirrel
                 this.Log().Info("Removing unnecessary data");
                 removeDependenciesFromPackageSpec(specPath);
 
-                if (releaseNotesProcessor != null) {
+                if (releaseNotesProcessor != null)
+                {
                     renderReleaseNotesMarkdown(specPath, releaseNotesProcessor);
                 }
 
@@ -125,10 +135,12 @@ namespace Squirrel
 
         static Task extractZipWithEscaping(string zipFilePath, string outFolder)
         {
-            return Task.Run(() => {
+            return Task.Run(() =>
+            {
                 using (var fs = File.OpenRead(zipFilePath))
                 using (var za = new ZipArchive(fs))
-                    foreach (var entry in za.Entries) {
+                    foreach (var entry in za.Entries)
+                    {
                         var parts = entry.FullName.Split('\\', '/').Select(x => Uri.UnescapeDataString(x));
                         var decoded = String.Join(Path.DirectorySeparatorChar.ToString(), parts);
 
@@ -137,10 +149,14 @@ namespace Squirrel
                         Directory.CreateDirectory(fullTargetDir);
                         var isDirectory = entry.IsDirectory();
 
-                        Utility.Retry(() => {
-                            if (isDirectory) {
+                        Utility.Retry(() =>
+                        {
+                            if (isDirectory)
+                            {
                                 Directory.CreateDirectory(fullTargetFile);
-                            } else {
+                            }
+                            else
+                            {
                                 entry.ExtractToFile(fullTargetFile, true);
                             }
                         }, 5);
@@ -157,17 +173,20 @@ namespace Squirrel
         {
             var re = new Regex(@"lib[\\\/][^\\\/]*[\\\/]", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
-            return Task.Run(() => {
+            return Task.Run(() =>
+            {
                 using (var fs = File.OpenRead(zipFilePath))
-                using (var za = new ZipArchive(fs)) {
+                using (var za = new ZipArchive(fs))
+                {
                     var totalItems = za.Entries.Count;
                     var currentItem = 0;
 
-                    foreach (var entry in za.Entries) {
+                    foreach (var entry in za.Entries)
+                    {
                         // Report progress early since we might be need to continue for non-matches
                         currentItem++;
                         var percentage = (currentItem * 100d) / totalItems;
-                        progress((int) percentage);
+                        progress((int)percentage);
 
                         var parts = entry.FullName.Split('\\', '/').Select(x => Uri.UnescapeDataString(x));
                         var decoded = String.Join(Path.DirectorySeparatorChar.ToString(), parts);
@@ -181,7 +200,8 @@ namespace Squirrel
                         var isDirectory = entry.IsDirectory();
 
                         var failureIsOkay = false;
-                        if (!isDirectory && decoded.Contains("_ExecutionStub.exe")) {
+                        if (!isDirectory && decoded.Contains("_ExecutionStub.exe"))
+                        {
                             // NB: On upgrade, many of these stubs will be in-use, nbd tho.
                             failureIsOkay = true;
 
@@ -192,15 +212,22 @@ namespace Squirrel
                             LogHost.Default.Info("Rigging execution stub for {0} to {1}", decoded, fullTargetFile);
                         }
 
-                        try {
-                            Utility.Retry(() => {
-                                if (isDirectory) {
+                        try
+                        {
+                            Utility.Retry(() =>
+                            {
+                                if (isDirectory)
+                                {
                                     Directory.CreateDirectory(fullTargetFile);
-                                } else {
+                                }
+                                else
+                                {
                                     entry.ExtractToFile(fullTargetFile, true);
                                 }
                             }, 5);
-                        } catch (Exception e) {
+                        }
+                        catch (Exception e)
+                        {
                             if (!failureIsOkay) throw;
                             LogHost.Default.WarnException("Can't write execution stub, probably in use", e);
                         }
@@ -225,7 +252,8 @@ namespace Squirrel
                 .OfType<XmlElement>()
                 .FirstOrDefault(x => x.Name.ToLowerInvariant() == "releasenotes");
 
-            if (releaseNotes == null) {
+            if (releaseNotes == null)
+            {
                 this.Log().Info("No release notes found in {0}", specPath);
                 return;
             }
@@ -243,7 +271,8 @@ namespace Squirrel
 
             var metadata = xdoc.DocumentElement.FirstChild;
             var dependenciesNode = metadata.ChildNodes.OfType<XmlElement>().FirstOrDefault(x => x.Name.ToLowerInvariant() == "dependencies");
-            if (dependenciesNode != null) {
+            if (dependenciesNode != null)
+            {
                 metadata.RemoveChild(dependenciesNode);
             }
 
@@ -259,7 +288,8 @@ namespace Squirrel
             ContentType.Merge(doc);
             ContentType.Clean(doc);
 
-            using (var sw = new StreamWriter(path, false, Encoding.UTF8)) {
+            using (var sw = new StreamWriter(path, false, Encoding.UTF8))
+            {
                 doc.Save(sw);
             }
         }

@@ -14,13 +14,13 @@ using System.Runtime.InteropServices;
 
 namespace Squirrel
 {
-    internal interface IDeltaPackageBuilder
+    public interface IDeltaPackageBuilder
     {
         ReleasePackage CreateDeltaPackage(ReleasePackage basePackage, ReleasePackage newPackage, string outputFile);
         ReleasePackage ApplyDeltaPackage(ReleasePackage basePackage, ReleasePackage deltaPackage, string outputFile);
     }
 
-    internal class DeltaPackageBuilder : IEnableLogger, IDeltaPackageBuilder
+    public class DeltaPackageBuilder : IEnableLogger, IDeltaPackageBuilder
     {
         readonly string localAppDirectory;
         public DeltaPackageBuilder(string localAppDataOverride = null)
@@ -33,7 +33,8 @@ namespace Squirrel
             Contract.Requires(basePackage != null);
             Contract.Requires(!String.IsNullOrEmpty(outputFile) && !File.Exists(outputFile));
 
-            if (basePackage.Version > newPackage.Version) {
+            if (basePackage.Version > newPackage.Version)
+            {
                 var message = String.Format(
                     "You cannot create a delta package based on version {0} as it is a later version than {1}",
                     basePackage.Version,
@@ -41,15 +42,18 @@ namespace Squirrel
                 throw new InvalidOperationException(message);
             }
 
-            if (basePackage.ReleasePackageFile == null) {
+            if (basePackage.ReleasePackageFile == null)
+            {
                 throw new ArgumentException("The base package's release file is null", "basePackage");
             }
 
-            if (!File.Exists(basePackage.ReleasePackageFile)) {
+            if (!File.Exists(basePackage.ReleasePackageFile))
+            {
                 throw new FileNotFoundException("The base package release does not exist", basePackage.ReleasePackageFile);
             }
 
-            if (!File.Exists(newPackage.ReleasePackageFile)) {
+            if (!File.Exists(newPackage.ReleasePackageFile))
+            {
                 throw new FileNotFoundException("The new package release does not exist", newPackage.ReleasePackageFile);
             }
 
@@ -57,7 +61,8 @@ namespace Squirrel
             string tempPath = null;
 
             using (Utility.WithTempDirectory(out baseTempPath, null))
-            using (Utility.WithTempDirectory(out tempPath, null)) {
+            using (Utility.WithTempDirectory(out tempPath, null))
+            {
                 var baseTempInfo = new DirectoryInfo(baseTempPath);
                 var tempInfo = new DirectoryInfo(tempPath);
 
@@ -96,11 +101,13 @@ namespace Squirrel
                     //
                     // The fourth case of "Exists only in old => delete it in new"
                     // is handled when we apply the delta package
-                    try {
+                    try
+                    {
                         var relativePath = targetFile.FullName.Replace(workingDirectory.FullName, "");
 
                         // 1. new file, leave it alone
-                        if (!baseLibFiles.ContainsKey(relativePath)) {
+                        if (!baseLibFiles.ContainsKey(relativePath))
+                        {
                             this.Log().Debug("{0} not found in base package, marking as new", relativePath);
                             fNew++;
                             return;
@@ -112,15 +119,19 @@ namespace Squirrel
                         var oldData = File.ReadAllBytes(oldFilePath);
                         var newData = File.ReadAllBytes(targetFile.FullName);
 
-                        if (Utility.ByteArrayCompareFast(oldData, newData)) {
+                        if (Utility.ByteArrayCompareFast(oldData, newData))
+                        {
                             // 2. exists in both, keep it the same
                             this.Log().Debug("{0} hasn't changed, writing dummy file", relativePath);
                             File.Create(targetFile.FullName + ".bsdiff").Dispose();
                             File.Create(targetFile.FullName + ".shasum").Dispose();
                             fSame++;
-                        } else {
+                        }
+                        else
+                        {
                             // 3. changed, write a delta in new
-                            using (FileStream of = File.Create(targetFile.FullName + ".bsdiff")) {
+                            using (FileStream of = File.Create(targetFile.FullName + ".bsdiff"))
+                            {
                                 BinaryPatchUtility.Create(oldData, newData, of);
                             }
                             var rl = ReleaseEntry.GenerateFromFile(new MemoryStream(newData), targetFile.Name + ".shasum");
@@ -129,7 +140,9 @@ namespace Squirrel
                         }
                         targetFile.Delete();
                         baseLibFiles.Remove(relativePath);
-                    } catch (Exception ex) {
+                    }
+                    catch (Exception ex)
+                    {
                         this.Log().DebugException(String.Format("Failed to create a delta for {0}", targetFile.Name), ex);
                         Utility.DeleteFileOrDirectoryHardOrGiveUp(targetFile.FullName + ".bsdiff");
                         Utility.DeleteFileOrDirectoryHardOrGiveUp(targetFile.FullName + ".diff");
@@ -148,20 +161,24 @@ namespace Squirrel
 
                 printProcessed(0);
 
-                var tResult = Task.Run(() => {
-                    Parallel.ForEach(newLibFiles, new ParallelOptions() { MaxDegreeOfParallelism = numParallel }, (f) => {
+                var tResult = Task.Run(() =>
+                {
+                    Parallel.ForEach(newLibFiles, new ParallelOptions() { MaxDegreeOfParallelism = numParallel }, (f) =>
+                    {
                         Utility.Retry(() => createDeltaForSingleFile(f, tempInfo));
                     });
                 });
 
                 int prevCount = 0;
-                while (!tResult.IsCompleted) {
+                while (!tResult.IsCompleted)
+                {
                     // sleep for 2 seconds (in 100ms intervals)
                     for (int i = 0; i < 20 && !tResult.IsCompleted; i++)
                         Thread.Sleep(100);
 
                     int processed = fNew + fChanged + fSame;
-                    if (prevCount == processed) {
+                    if (prevCount == processed)
+                    {
                         // if there has been no progress, do not print another message
                         continue;
                     }
@@ -202,7 +219,8 @@ namespace Squirrel
             string deltaPath;
 
             using (Utility.WithTempDirectory(out deltaPath, localAppDirectory))
-            using (Utility.WithTempDirectory(out workingPath, localAppDirectory)) {
+            using (Utility.WithTempDirectory(out workingPath, localAppDirectory))
+            {
 
                 ZipFile.ExtractToDirectory(deltaPackage.InputPackageFile, deltaPath);
 
@@ -224,7 +242,8 @@ namespace Squirrel
                     .Where(x => !x.EndsWith(".shasum", StringComparison.InvariantCultureIgnoreCase))
                     .Where(x => !x.EndsWith(".diff", StringComparison.InvariantCultureIgnoreCase) ||
                                 !deltaPathRelativePaths.Contains(x.Replace(".diff", ".bsdiff")))
-                    .ForEach(file => {
+                    .ForEach(file =>
+                    {
                         pathsVisited.Add(Regex.Replace(file, @"\.(bs)?diff$", "").ToLowerInvariant());
                         applyDiffToFile(deltaPath, file, workingPath);
                     });
@@ -236,7 +255,8 @@ namespace Squirrel
                 new DirectoryInfo(workingPath).GetAllFilesRecursively()
                     .Select(x => x.FullName.Replace(workingPath + Path.DirectorySeparatorChar, "").ToLowerInvariant())
                     .Where(x => x.StartsWith("lib", StringComparison.InvariantCultureIgnoreCase) && !pathsVisited.Contains(x))
-                    .ForEach(x => {
+                    .ForEach(x =>
+                    {
                         this.Log().Info("{0} was in old package but not in new one, deleting", x);
                         File.Delete(Path.Combine(workingPath, x));
                     });
@@ -247,7 +267,8 @@ namespace Squirrel
                 // package's versions (i.e. the nuspec file, etc etc).
                 deltaPathRelativePaths
                     .Where(x => !x.StartsWith("lib", StringComparison.InvariantCultureIgnoreCase))
-                    .ForEach(x => {
+                    .ForEach(x =>
+                    {
                         this.Log().Info("Updating metadata file: {0}", x);
                         File.Copy(Path.Combine(deltaPath, x), Path.Combine(workingPath, x), true);
                     });
@@ -269,37 +290,49 @@ namespace Squirrel
             var tempTargetFile = default(string);
             Utility.WithTempFile(out tempTargetFile, localAppDirectory);
 
-            try {
+            try
+            {
                 // NB: Zero-length diffs indicate the file hasn't actually changed
-                if (new FileInfo(inputFile).Length == 0) {
+                if (new FileInfo(inputFile).Length == 0)
+                {
                     this.Log().Info("{0} exists unchanged, skipping", relativeFilePath);
                     return;
                 }
 
-                if (relativeFilePath.EndsWith(".bsdiff", StringComparison.InvariantCultureIgnoreCase)) {
+                if (relativeFilePath.EndsWith(".bsdiff", StringComparison.InvariantCultureIgnoreCase))
+                {
                     using (var of = File.OpenWrite(tempTargetFile))
-                    using (var inf = File.OpenRead(finalTarget)) {
+                    using (var inf = File.OpenRead(finalTarget))
+                    {
                         this.Log().Info("Applying bsdiff to {0}", relativeFilePath);
                         BinaryPatchUtility.Apply(inf, () => File.OpenRead(inputFile), of);
                     }
 
                     verifyPatchedFile(relativeFilePath, inputFile, tempTargetFile);
-                } else if (relativeFilePath.EndsWith(".diff", StringComparison.InvariantCultureIgnoreCase)) {
+                }
+                else if (relativeFilePath.EndsWith(".diff", StringComparison.InvariantCultureIgnoreCase))
+                {
                     this.Log().Info("Applying msdiff to {0}", relativeFilePath);
 
 #if NETFRAMEWORK
                     if (true) {
 #else
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
 #endif
                         MsDeltaCompression.ApplyDelta(inputFile, finalTarget, tempTargetFile);
-                    } else {
+                    }
+                    else
+                    {
                         throw new InvalidOperationException("msdiff is not supported on non-windows platforms.");
                     }
                     verifyPatchedFile(relativeFilePath, inputFile, tempTargetFile);
-                } else {
+                }
+                else
+                {
                     using (var of = File.OpenWrite(tempTargetFile))
-                    using (var inf = File.OpenRead(inputFile)) {
+                    using (var inf = File.OpenRead(inputFile))
+                    {
                         this.Log().Info("Adding new file: {0}", relativeFilePath);
                         inf.CopyTo(of);
                     }
@@ -311,7 +344,9 @@ namespace Squirrel
                 if (!targetPath.Exists) targetPath.Create();
 
                 File.Move(tempTargetFile, finalTarget);
-            } finally {
+            }
+            finally
+            {
                 if (File.Exists(tempTargetFile)) Utility.DeleteFileOrDirectoryHardOrGiveUp(tempTargetFile);
             }
         }
@@ -322,13 +357,15 @@ namespace Squirrel
             var expectedReleaseEntry = ReleaseEntry.ParseReleaseEntry(File.ReadAllText(shaFile, Encoding.UTF8));
             var actualReleaseEntry = ReleaseEntry.GenerateFromFile(tempTargetFile);
 
-            if (expectedReleaseEntry.Filesize != actualReleaseEntry.Filesize) {
+            if (expectedReleaseEntry.Filesize != actualReleaseEntry.Filesize)
+            {
                 this.Log().Warn("Patched file {0} has incorrect size, expected {1}, got {2}", relativeFilePath,
                     expectedReleaseEntry.Filesize, actualReleaseEntry.Filesize);
                 throw new ChecksumFailedException() { Filename = relativeFilePath };
             }
 
-            if (expectedReleaseEntry.SHA1 != actualReleaseEntry.SHA1) {
+            if (expectedReleaseEntry.SHA1 != actualReleaseEntry.SHA1)
+            {
                 this.Log().Warn("Patched file {0} has incorrect SHA1, expected {1}, got {2}", relativeFilePath,
                     expectedReleaseEntry.SHA1, actualReleaseEntry.SHA1);
                 throw new ChecksumFailedException() { Filename = relativeFilePath };

@@ -1,27 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <ProjectName Condition=" '$(ProjectName)' == '' ">$(MSBuildProjectName)</ProjectName>
-    <BaseOutputPath>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\build\))</BaseOutputPath>
-    <BaseIntermediateOutputPath>$(BaseOutputPath)obj\$(ProjectName)\</BaseIntermediateOutputPath>
-    <OutputPath>$(BaseOutputPath)$(Configuration)\</OutputPath>
+	<PropertyGroup>
+		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+		<ProjectName Condition=" '$(ProjectName)' == '' ">$(MSBuildProjectName)</ProjectName>
+		<BaseOutputPath>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\build\))</BaseOutputPath>
+		<BaseIntermediateOutputPath>$(BaseOutputPath)obj\$(ProjectName)\</BaseIntermediateOutputPath>
+		<OutputPath>$(BaseOutputPath)$(Configuration)\</OutputPath>
 
-    <LangVersion>9</LangVersion>
-    <SignAssembly>True</SignAssembly>
-    <AssemblyOriginatorKeyFile>..\..\Squirrel.snk</AssemblyOriginatorKeyFile>
-    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <Product>Squirrel</Product>
-  </PropertyGroup>
+		<LangVersion>9</LangVersion>
+		<SignAssembly>True</SignAssembly>
+		<AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+		<Product>Squirrel</Product>
+	</PropertyGroup>
 
-  <ItemGroup Condition=" '$(MSBuildProjectExtension)'=='.csproj' ">
-    <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.*" PrivateAssets="All" />
-  </ItemGroup>
+	<ItemGroup Condition=" '$(MSBuildProjectExtension)'=='.csproj' ">
+		<PackageReference Include="Nerdbank.GitVersioning" Version="3.6.*" PrivateAssets="All" />
+	</ItemGroup>
 
-  <PropertyGroup Condition=" '$(MSBuildProjectExtension)'=='.vcxproj' ">
-    <Platform Condition=" '$(Platform)' == '' OR '$(Platform)' == 'AnyCPU' ">Win32</Platform>
-    <IntDir>$(BaseIntermediateOutputPath)$(Configuration)\$(Platform)\</IntDir>
-    <OutDir>$(OutputPath)$(Platform)\</OutDir>
-  </PropertyGroup>
+	<PropertyGroup Condition=" '$(MSBuildProjectExtension)'=='.vcxproj' ">
+		<Platform Condition=" '$(Platform)' == '' OR '$(Platform)' == 'AnyCPU' ">Win32</Platform>
+		<IntDir>$(BaseIntermediateOutputPath)$(Configuration)\$(Platform)\</IntDir>
+		<OutDir>$(OutputPath)$(Platform)\</OutDir>
+	</PropertyGroup>
 </Project>

@@ -14,7 +14,7 @@ namespace Squirrel
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal static class HelperExe
+    public static class HelperExe
     {
         public static string SetupPath => FindHelperFile("Setup.exe");
         public static string UpdatePath(Func<string, bool> predicate) => FindHelperFile("Update.exe", predicate);
@@ -89,12 +89,14 @@ namespace Squirrel
             var targetName = Path.GetFileNameWithoutExtension(wxsTarget);
             var objFile = Path.Combine(workingDir, targetName + ".wixobj");
 
-            try {
+            try
+            {
                 // Candle reprocesses and compiles WiX source files into object files (.wixobj).
                 var candleParams = new string[] { "-nologo", "-ext", "WixNetFxExtension", "-out", objFile, wxsTarget };
                 var processResult = await Utility.InvokeProcessAsync(WixCandlePath, candleParams, CancellationToken.None, workingDir).ConfigureAwait(false);
 
-                if (processResult.ExitCode != 0) {
+                if (processResult.ExitCode != 0)
+                {
                     var msg = String.Format(
                         "Failed to compile WiX template, command invoked was: '{0} {1}'\n\nOutput was:\n{2}",
                         "candle.exe", Utility.ArgsToCommandLine(candleParams), processResult.StdOutput);
@@ -105,13 +107,16 @@ namespace Squirrel
                 var lightParams = new string[] { "-ext", "WixNetFxExtension", "-spdb", "-sval", "-out", outputFile, objFile };
                 processResult = await Utility.InvokeProcessAsync(WixLightPath, lightParams, CancellationToken.None, workingDir).ConfigureAwait(false);
 
-                if (processResult.ExitCode != 0) {
+                if (processResult.ExitCode != 0)
+                {
                     var msg = String.Format(
                         "Failed to link WiX template, command invoked was: '{0} {1}'\n\nOutput was:\n{2}",
                         "light.exe", Utility.ArgsToCommandLine(lightParams), processResult.StdOutput);
                     throw new Exception(msg);
                 }
-            } finally {
+            }
+            finally
+            {
                 Utility.DeleteFileOrDirectoryHardOrGiveUp(objFile);
             }
         }
@@ -120,7 +125,8 @@ namespace Squirrel
         {
             var args = new[] { Path.GetFullPath(exePath), "--set-icon", iconPath };
             var processResult = await Utility.InvokeProcessAsync(RceditPath, args, CancellationToken.None).ConfigureAwait(false);
-            if (processResult.ExitCode != 0) {
+            if (processResult.ExitCode != 0)
+            {
                 var msg = String.Format(
                     "Failed to modify resources, command invoked was: '{0} {1}'\n\nOutput was:\n{2}",
                     RceditPath, args, processResult.StdOutput);
@@ -142,13 +148,15 @@ namespace Squirrel
                 "--set-product-version", package.Version.ToString(),
             };
 
-            if (iconPath != null) {
+            if (iconPath != null)
+            {
                 args.Add("--set-icon");
                 args.Add(Path.GetFullPath(iconPath));
             }
 
             var processResult = await Utility.InvokeProcessAsync(RceditPath, args, CancellationToken.None).ConfigureAwait(false);
-            if (processResult.ExitCode != 0) {
+            if (processResult.ExitCode != 0)
+            {
                 var msg = String.Format(
                     "Failed to modify resources, command invoked was: '{0} {1}'\n\nOutput was:\n{2}",
                     RceditPath, args, processResult.StdOutput);

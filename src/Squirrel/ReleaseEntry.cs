@@ -98,11 +98,16 @@ namespace Squirrel
 
         /// <inheritdoc />
         [IgnoreDataMember]
-        public string EntryAsString {
-            get {
-                if (StagingPercentage != null) {
+        public string EntryAsString
+        {
+            get
+            {
+                if (StagingPercentage != null)
+                {
                     return String.Format("{0} {1}{2} {3} # {4}", SHA1, BaseUrl, Filename, Filesize, stagingPercentageAsString(StagingPercentage.Value));
-                } else {
+                }
+                else
+                {
                     return String.Format("{0} {1}{2} {3}", SHA1, BaseUrl, Filename, Filesize);
                 }
             }
@@ -121,7 +126,8 @@ namespace Squirrel
         {
             var zp = new ZipPackage(Path.Combine(packageDirectory, Filename));
 
-            if (String.IsNullOrWhiteSpace(zp.ReleaseNotes)) {
+            if (String.IsNullOrWhiteSpace(zp.ReleaseNotes))
+            {
                 throw new Exception(String.Format("Invalid 'ReleaseNotes' value in nuspec file at '{0}'", Path.Combine(packageDirectory, Filename)));
             }
 
@@ -148,21 +154,25 @@ namespace Squirrel
 
             float? stagingPercentage = null;
             var m = stagingRegex.Match(entry);
-            if (m != null && m.Success) {
+            if (m != null && m.Success)
+            {
                 stagingPercentage = Single.Parse(m.Groups[1].Value) / 100.0f;
             }
 
             entry = commentRegex.Replace(entry, "");
-            if (String.IsNullOrWhiteSpace(entry)) {
+            if (String.IsNullOrWhiteSpace(entry))
+            {
                 return null;
             }
 
             m = entryRegex.Match(entry);
-            if (!m.Success) {
+            if (!m.Success)
+            {
                 throw new Exception("Invalid release entry: " + entry);
             }
 
-            if (m.Groups.Count != 4) {
+            if (m.Groups.Count != 4)
+            {
                 throw new Exception("Invalid release entry: " + entry);
             }
 
@@ -173,12 +183,14 @@ namespace Squirrel
             string baseUrl = null;
             string query = null;
 
-            if (Utility.IsHttpUrl(filename)) {
+            if (Utility.IsHttpUrl(filename))
+            {
                 var uri = new Uri(filename);
                 var path = uri.LocalPath;
                 var authority = uri.GetLeftPart(UriPartial.Authority);
 
-                if (String.IsNullOrEmpty(path) || String.IsNullOrEmpty(authority)) {
+                if (String.IsNullOrEmpty(path) || String.IsNullOrEmpty(authority))
+                {
                     throw new Exception("Invalid URL");
                 }
 
@@ -186,12 +198,14 @@ namespace Squirrel
                 baseUrl = authority + path.Substring(0, indexOfLastPathSeparator);
                 filename = path.Substring(indexOfLastPathSeparator);
 
-                if (!String.IsNullOrEmpty(uri.Query)) {
+                if (!String.IsNullOrEmpty(uri.Query))
+                {
                     query = uri.Query;
                 }
             }
 
-            if (filename.IndexOfAny(Path.GetInvalidFileNameChars()) > -1) {
+            if (filename.IndexOfAny(Path.GetInvalidFileNameChars()) > -1)
+            {
                 throw new Exception("Filename can either be an absolute HTTP[s] URL, *or* a file name");
             }
 
@@ -212,7 +226,7 @@ namespace Squirrel
 
             uint val = BitConverter.ToUInt32(userId.Value.ToByteArray(), 12);
 
-            double percentage = ((double) val / (double) UInt32.MaxValue);
+            double percentage = ((double)val / (double)UInt32.MaxValue);
             return percentage < StagingPercentage.Value;
         }
 
@@ -221,7 +235,8 @@ namespace Squirrel
         /// </summary>
         public static IEnumerable<ReleaseEntry> ParseReleaseFile(string fileContents)
         {
-            if (String.IsNullOrEmpty(fileContents)) {
+            if (String.IsNullOrEmpty(fileContents))
+            {
                 return new ReleaseEntry[0];
             }
 
@@ -242,7 +257,8 @@ namespace Squirrel
         /// </summary>
         public static IEnumerable<ReleaseEntry> ParseReleaseFileAndApplyStaging(string fileContents, Guid? userToken)
         {
-            if (String.IsNullOrEmpty(fileContents)) {
+            if (String.IsNullOrEmpty(fileContents))
+            {
                 return new ReleaseEntry[0];
             }
 
@@ -265,7 +281,8 @@ namespace Squirrel
             Contract.Requires(releaseEntries != null && releaseEntries.Any());
             Contract.Requires(stream != null);
 
-            using (var sw = new StreamWriter(stream, Encoding.UTF8)) {
+            using (var sw = new StreamWriter(stream, Encoding.UTF8))
+            {
                 sw.Write(String.Join("\n", releaseEntries
                     .OrderBy(x => x.Version)
                     .ThenByDescending(x => x.IsDelta)
@@ -281,7 +298,8 @@ namespace Squirrel
             Contract.Requires(releaseEntries != null && releaseEntries.Any());
             Contract.Requires(!String.IsNullOrEmpty(path));
 
-            using (var f = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None)) {
+            using (var f = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
                 WriteReleaseFile(releaseEntries, f);
             }
         }
@@ -303,7 +321,8 @@ namespace Squirrel
         /// </summary>
         public static ReleaseEntry GenerateFromFile(string path, string baseUrl = null)
         {
-            using (var inf = File.OpenRead(path)) {
+            using (var inf = File.OpenRead(path))
+            {
                 return GenerateFromFile(inf, Path.GetFileName(path), baseUrl);
             }
         }
@@ -321,8 +340,10 @@ namespace Squirrel
 
             // Generate release entries for all of the local packages
             var entriesQueue = new ConcurrentQueue<ReleaseEntry>();
-            Parallel.ForEach(packagesDir.GetFiles("*.nupkg"), x => {
-                using (var file = x.OpenRead()) {
+            Parallel.ForEach(packagesDir.GetFiles("*.nupkg"), x =>
+            {
+                using (var file = x.OpenRead())
+                {
                     entriesQueue.Enqueue(GenerateFromFile(file, x.Name));
                 }
             });
@@ -333,18 +354,23 @@ namespace Squirrel
             var tempFile = default(string);
             Utility.WithTempFile(out tempFile, releasePackagesDir);
 
-            try {
-                using (var of = File.OpenWrite(tempFile)) {
+            try
+            {
+                using (var of = File.OpenWrite(tempFile))
+                {
                     if (entries.Count > 0) WriteReleaseFile(entries, of);
                 }
 
                 var target = Path.Combine(packagesDir.FullName, "RELEASES");
-                if (File.Exists(target)) {
+                if (File.Exists(target))
+                {
                     File.Delete(target);
                 }
 
                 File.Move(tempFile, target);
-            } finally {
+            }
+            finally
+            {
                 if (File.Exists(tempFile)) Utility.DeleteFileOrDirectoryHardOrGiveUp(tempFile);
             }
 
@@ -372,7 +398,7 @@ namespace Squirrel
         /// Given a list of releases and a specified release package, returns the release package
         /// directly previous to the specified version.
         /// </summary>
-        internal static ReleasePackage GetPreviousRelease(IEnumerable<ReleaseEntry> releaseEntries, IReleasePackage package, string targetDir)
+        public static ReleasePackage GetPreviousRelease(IEnumerable<ReleaseEntry> releaseEntries, IReleasePackage package, string targetDir)
         {
             if (releaseEntries == null || !releaseEntries.Any()) return null;
             return releaseEntries

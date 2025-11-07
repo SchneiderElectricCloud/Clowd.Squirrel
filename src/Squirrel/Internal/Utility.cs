@@ -16,7 +16,7 @@ using System.Net;
 
 namespace Squirrel
 {
-    internal static class Utility
+    public static class Utility
     {
         public static string RemoveByteOrderMarkerIfPresent(string content)
         {
@@ -28,11 +28,13 @@ namespace Squirrel
         {
             byte[] output = { };
 
-            if (content == null) {
+            if (content == null)
+            {
                 goto done;
             }
 
-            Func<byte[], byte[], bool> matches = (bom, src) => {
+            Func<byte[], byte[], bool> matches = (bom, src) =>
+            {
                 if (src.Length < bom.Length) return false;
 
                 return !bom.Where((chr, index) => src[index] != chr).Any();
@@ -44,22 +46,34 @@ namespace Squirrel
             var utf16Le = new byte[] { 0xFF, 0xFE };
             var utf8 = new byte[] { 0xEF, 0xBB, 0xBF };
 
-            if (matches(utf32Be, content)) {
+            if (matches(utf32Be, content))
+            {
                 output = new byte[content.Length - utf32Be.Length];
-            } else if (matches(utf32Le, content)) {
+            }
+            else if (matches(utf32Le, content))
+            {
                 output = new byte[content.Length - utf32Le.Length];
-            } else if (matches(utf16Be, content)) {
+            }
+            else if (matches(utf16Be, content))
+            {
                 output = new byte[content.Length - utf16Be.Length];
-            } else if (matches(utf16Le, content)) {
+            }
+            else if (matches(utf16Le, content))
+            {
                 output = new byte[content.Length - utf16Le.Length];
-            } else if (matches(utf8, content)) {
+            }
+            else if (matches(utf8, content))
+            {
                 output = new byte[content.Length - utf8.Length];
-            } else {
+            }
+            else
+            {
                 output = content;
             }
 
         done:
-            if (output.Length > 0) {
+            if (output.Length > 0)
+            {
                 Buffer.BlockCopy(content, content.Length - output.Length, output, 0, output.Length);
             }
 
@@ -70,8 +84,9 @@ namespace Squirrel
         {
             retVal = default(TEnum);
             bool success = Enum.IsDefined(typeof(TEnum), enumValue);
-            if (success) {
-                retVal = (TEnum) Enum.ToObject(typeof(TEnum), enumValue);
+            if (success)
+            {
+                retVal = (TEnum)Enum.ToObject(typeof(TEnum), enumValue);
             }
             return success;
         }
@@ -108,7 +123,8 @@ namespace Squirrel
         {
             Contract.Requires(filePath != null);
 
-            using (var stream = File.OpenRead(filePath)) {
+            using (var stream = File.OpenRead(filePath))
+            {
                 return CalculateStreamSHA1(stream);
             }
         }
@@ -117,7 +133,8 @@ namespace Squirrel
         {
             Contract.Requires(file != null && file.CanRead);
 
-            using (var sha1 = SHA1.Create()) {
+            using (var sha1 = SHA1.Create())
+            {
                 return BitConverter.ToString(sha1.ComputeHash(file)).Replace("-", String.Empty);
             }
         }
@@ -132,7 +149,8 @@ namespace Squirrel
             Contract.Requires(!String.IsNullOrEmpty(from) && File.Exists(from));
             Contract.Requires(!String.IsNullOrEmpty(to));
 
-            if (!File.Exists(from)) {
+            if (!File.Exists(from))
+            {
                 Log().Warn("The file {0} does not exist", from);
 
                 // TODO: should we fail this operation?
@@ -147,7 +165,8 @@ namespace Squirrel
         {
             Contract.Requires(retries > 0);
 
-            Func<object> thunk = () => {
+            Func<object> thunk = () =>
+            {
                 block();
                 return null;
             };
@@ -159,12 +178,17 @@ namespace Squirrel
         {
             Contract.Requires(retries > 0);
 
-            while (true) {
-                try {
+            while (true)
+            {
+                try
+                {
                     T ret = block();
                     return ret;
-                } catch (Exception) {
-                    if (retries == 0) {
+                }
+                catch (Exception)
+                {
+                    if (retries == 0)
+                    {
                         throw;
                     }
 
@@ -176,10 +200,14 @@ namespace Squirrel
 
         public static async Task RetryAsync(this Func<Task> block, int retries = 4, int retryDelay = 250)
         {
-            while (true) {
-                try {
+            while (true)
+            {
+                try
+                {
                     await block().ConfigureAwait(false);
-                } catch {
+                }
+                catch
+                {
                     if (retries-- == 0) throw;
                     await Task.Delay(retryDelay).ConfigureAwait(false);
                 }
@@ -188,10 +216,14 @@ namespace Squirrel
 
         public static async Task<T> RetryAsync<T>(this Func<Task<T>> block, int retries = 4, int retryDelay = 250)
         {
-            while (true) {
-                try {
+            while (true)
+            {
+                try
+                {
                     return await block().ConfigureAwait(false);
-                } catch {
+                }
+                catch
+                {
                     if (retries-- == 0) throw;
                     await Task.Delay(retryDelay).ConfigureAwait(false);
                 }
@@ -219,7 +251,8 @@ namespace Squirrel
         public static string ArgsToCommandLine(IEnumerable<string> args)
         {
             var sb = new StringBuilder();
-            foreach (var arg in args) {
+            foreach (var arg in args)
+            {
                 if (arg == null)
                     continue;
                 if (sb.Length != 0)
@@ -228,21 +261,29 @@ namespace Squirrel
                 // or https://devblogs.microsoft.com/oldnewthing/?p=12833
                 if (arg.Length != 0 && arg.IndexOfAny(_cmdChars) < 0)
                     sb.Append(arg);
-                else {
+                else
+                {
                     sb.Append('"');
-                    for (int c = 0; c < arg.Length; c++) {
+                    for (int c = 0; c < arg.Length; c++)
+                    {
                         int backslashes = 0;
-                        while (c < arg.Length && arg[c] == '\\') {
+                        while (c < arg.Length && arg[c] == '\\')
+                        {
                             c++;
                             backslashes++;
                         }
-                        if (c == arg.Length) {
+                        if (c == arg.Length)
+                        {
                             sb.Append('\\', backslashes * 2);
                             break;
-                        } else if (arg[c] == '"') {
+                        }
+                        else if (arg[c] == '"')
+                        {
                             sb.Append('\\', backslashes * 2 + 1);
                             sb.Append('"');
-                        } else {
+                        }
+                        else
+                        {
                             sb.Append('\\', backslashes);
                             sb.Append(arg[c]);
                         }
@@ -260,20 +301,22 @@ namespace Squirrel
         public static string EscapeCmdExeMetachars(string command)
         {
             var result = new StringBuilder();
-            foreach (var ch in command) {
-                switch (ch) {
-                case '(':
-                case ')':
-                case '%':
-                case '!':
-                case '^':
-                case '"':
-                case '<':
-                case '>':
-                case '&':
-                case '|':
-                    result.Append('^');
-                    break;
+            foreach (var ch in command)
+            {
+                switch (ch)
+                {
+                    case '(':
+                    case ')':
+                    case '%':
+                    case '!':
+                    case '^':
+                    case '"':
+                    case '<':
+                    case '>':
+                    case '&':
+                    case '|':
+                        result.Append('^');
+                        break;
                 }
                 result.Append(ch);
             }
@@ -298,9 +341,12 @@ namespace Squirrel
         /// </summary>
         public static Task<ProcessResult> InvokeProcessAsync(string fileName, IEnumerable<string> args, CancellationToken ct, string workingDirectory = "")
         {
-            if (Environment.OSVersion.Platform != PlatformID.Win32NT && fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) {
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT && fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
                 return InvokeProcessUnsafeAsync(CreateProcessStartInfo("wine", ArgsToCommandLine(new string[] { fileName }.Concat(args)), workingDirectory), ct);
-            } else {
+            }
+            else
+            {
                 return InvokeProcessUnsafeAsync(CreateProcessStartInfo(fileName, ArgsToCommandLine(args), workingDirectory), ct);
             }
         }
@@ -321,22 +367,27 @@ namespace Squirrel
         public static async Task<ProcessResult> InvokeProcessUnsafeAsync(ProcessStartInfo psi, CancellationToken ct)
         {
             var pi = Process.Start(psi);
-            await Task.Run(() => {
-                while (!ct.IsCancellationRequested) {
+            await Task.Run(() =>
+            {
+                while (!ct.IsCancellationRequested)
+                {
                     if (pi.WaitForExit(2000)) return;
                 }
 
-                if (ct.IsCancellationRequested) {
+                if (ct.IsCancellationRequested)
+                {
                     pi.Kill();
                     ct.ThrowIfCancellationRequested();
                 }
             }).ConfigureAwait(false);
 
             string textResult = await pi.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-            if (String.IsNullOrWhiteSpace(textResult) || pi.ExitCode != 0) {
+            if (String.IsNullOrWhiteSpace(textResult) || pi.ExitCode != 0)
+            {
                 textResult = (textResult ?? "") + "\n" + await pi.StandardError.ReadToEndAsync().ConfigureAwait(false);
 
-                if (String.IsNullOrWhiteSpace(textResult)) {
+                if (String.IsNullOrWhiteSpace(textResult))
+                {
                     textResult = String.Empty;
                 }
             }
@@ -353,14 +404,16 @@ namespace Squirrel
         {
             return Task.WhenAll(
                 from partition in Partitioner.Create(source).GetPartitions(degreeOfParallelism)
-                select Task.Run(async () => {
+                select Task.Run(async () =>
+                {
                     using (partition)
                         while (partition.MoveNext())
                             await body(partition.Current).ConfigureAwait(false);
                 }));
         }
 
-        static Lazy<string> directoryChars = new Lazy<string>(() => {
+        static Lazy<string> directoryChars = new Lazy<string>(() =>
+        {
             return "abcdefghijklmnopqrstuvwxyz" +
                 Enumerable.Range(0x03B0, 0x03FF - 0x03B0)   // Greek and Coptic
                     .Concat(Enumerable.Range(0x0400, 0x04FF - 0x0400)) // Cyrillic
@@ -370,7 +423,8 @@ namespace Squirrel
 
         internal static string tempNameForIndex(int index, string prefix)
         {
-            if (index < directoryChars.Value.Length) {
+            if (index < directoryChars.Value.Length)
+            {
                 return prefix + directoryChars.Value[index];
             }
 
@@ -405,10 +459,12 @@ namespace Squirrel
 
             IDisposable folderMutex = null;
 
-            foreach (var name in names) {
+            foreach (var name in names)
+            {
                 var target = Path.Combine(di.FullName, name);
 
-                if (!File.Exists(target) && !Directory.Exists(target)) {
+                if (!File.Exists(target) && !Directory.Exists(target))
+                {
                     Directory.CreateDirectory(target);
                     tempDir = new DirectoryInfo(target);
 
@@ -418,10 +474,13 @@ namespace Squirrel
                     // folder we've selected and attempt to open it exclusively. This will act like a mutex as only
                     // one Squirrel instance will be able to open this file. 
 
-                    try {
+                    try
+                    {
                         folderMutex = File.Create(tempDir.FullName + "_lock", 1, FileOptions.DeleteOnClose);
                         break;
-                    } catch (IOException ex) {
+                    }
+                    catch (IOException ex)
+                    {
                         Log().WarnException($"Selected temp folder '{tempDir.FullName}' but unable to open file mutex.", ex);
                     }
                 }
@@ -429,7 +488,8 @@ namespace Squirrel
 
             path = tempDir.FullName;
 
-            return Disposable.Create(() => {
+            return Disposable.Create(() =>
+            {
                 folderMutex?.Dispose();
                 DeleteFileOrDirectoryHardOrGiveUp(tempDir.FullName);
             });
@@ -441,10 +501,12 @@ namespace Squirrel
             var names = Enumerable.Range(0, 1 << 20).Select(x => tempNameForIndex(x, "tempfile"));
 
             path = "";
-            foreach (var name in names) {
+            foreach (var name in names)
+            {
                 path = Path.Combine(di.FullName, name);
 
-                if (!File.Exists(path) && !Directory.Exists(path)) {
+                if (!File.Exists(path) && !Directory.Exists(path))
+                {
                     break;
                 }
             }
@@ -458,16 +520,24 @@ namespace Squirrel
             Contract.Requires(!String.IsNullOrEmpty(path));
             Log().Debug("Starting to delete: {0}", path);
 
-            try {
-                if (File.Exists(path)) {
+            try
+            {
+                if (File.Exists(path))
+                {
                     DeleteFsiVeryHard(new FileInfo(path));
-                } else if (Directory.Exists(path)) {
+                }
+                else if (Directory.Exists(path))
+                {
                     DeleteFsiTree(new DirectoryInfo(path));
-                } else {
+                }
+                else
+                {
                     if (throwOnFailure)
                         Log().Warn($"Cannot delete '{path}' if it does not exist.");
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Log().ErrorException($"Unable to delete '{path}'", ex);
                 if (throwOnFailure)
                     throw;
@@ -479,20 +549,26 @@ namespace Squirrel
         private static void DeleteFsiTree(FileSystemInfo fileSystemInfo)
         {
             // if junction / symlink, don't iterate, just delete it.
-            if (fileSystemInfo.Attributes.HasFlag(FileAttributes.ReparsePoint)) {
+            if (fileSystemInfo.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
                 DeleteFsiVeryHard(fileSystemInfo);
                 return;
             }
 
             // recursively delete children
-            try {
+            try
+            {
                 var directoryInfo = fileSystemInfo as DirectoryInfo;
-                if (directoryInfo != null) {
-                    foreach (FileSystemInfo childInfo in directoryInfo.GetFileSystemInfos()) {
+                if (directoryInfo != null)
+                {
+                    foreach (FileSystemInfo childInfo in directoryInfo.GetFileSystemInfos())
+                    {
                         DeleteFsiTree(childInfo);
                     }
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Log().WarnException($"Unable to traverse children of '{fileSystemInfo.FullName}'", ex);
             }
 
@@ -518,15 +594,22 @@ namespace Squirrel
 
             // retry a few times. if a directory in this tree is open in Windows Explorer,
             // it might be locked for a little while WE cleans up handles
-            try {
-                Retry(() => {
-                    try {
+            try
+            {
+                Retry(() =>
+                {
+                    try
+                    {
                         deleteMe();
-                    } catch (DirectoryNotFoundException) {
+                    }
+                    catch (DirectoryNotFoundException)
+                    {
                         return; // good!
                     }
                 }, retries: 4, retryDelay: 50);
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Log().WarnException($"Unable to delete child '{fileSystemInfo.FullName}'", ex);
                 throw;
             }
@@ -557,14 +640,16 @@ namespace Squirrel
             var file = File.OpenRead(localReleaseFile);
 
             // NB: sr disposes file
-            using (var sr = new StreamReader(file, Encoding.UTF8)) {
+            using (var sr = new StreamReader(file, Encoding.UTF8))
+            {
                 return ReleaseEntry.ParseReleaseFile(sr.ReadToEnd());
             }
         }
 
         public static ReleaseEntry FindCurrentVersion(IEnumerable<ReleaseEntry> localReleases)
         {
-            if (!localReleases.Any()) {
+            if (!localReleases.Any())
+            {
                 return null;
             }
 
@@ -579,7 +664,8 @@ namespace Squirrel
         public static bool IsHttpUrl(string urlOrPath)
         {
             var uri = default(Uri);
-            if (!Uri.TryCreate(urlOrPath, UriKind.Absolute, out uri)) {
+            if (!Uri.TryCreate(urlOrPath, UriKind.Absolute, out uri))
+            {
                 return false;
             }
 
@@ -589,7 +675,8 @@ namespace Squirrel
         public static Uri AppendPathToUri(Uri uri, string path)
         {
             var builder = new UriBuilder(uri);
-            if (!builder.Path.EndsWith("/")) {
+            if (!builder.Path.EndsWith("/"))
+            {
                 builder.Path += "/";
             }
 
@@ -606,7 +693,8 @@ namespace Squirrel
         {
             var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
 
-            foreach (var entry in newQuery) {
+            foreach (var entry in newQuery)
+            {
                 query[entry.Key] = entry.Value;
             }
 
@@ -635,22 +723,26 @@ namespace Squirrel
 
         public static void LogIfThrows(this IFullLogger This, LogLevel level, string message, Action block)
         {
-            try {
+            try
+            {
                 block();
-            } catch (Exception ex) {
-                switch (level) {
-                case LogLevel.Debug:
-                    This.DebugException(message ?? "", ex);
-                    break;
-                case LogLevel.Info:
-                    This.InfoException(message ?? "", ex);
-                    break;
-                case LogLevel.Warn:
-                    This.WarnException(message ?? "", ex);
-                    break;
-                case LogLevel.Error:
-                    This.ErrorException(message ?? "", ex);
-                    break;
+            }
+            catch (Exception ex)
+            {
+                switch (level)
+                {
+                    case LogLevel.Debug:
+                        This.DebugException(message ?? "", ex);
+                        break;
+                    case LogLevel.Info:
+                        This.InfoException(message ?? "", ex);
+                        break;
+                    case LogLevel.Warn:
+                        This.WarnException(message ?? "", ex);
+                        break;
+                    case LogLevel.Error:
+                        This.ErrorException(message ?? "", ex);
+                        break;
                 }
 
                 throw;
@@ -659,22 +751,26 @@ namespace Squirrel
 
         public static async Task LogIfThrows(this IFullLogger This, LogLevel level, string message, Func<Task> block)
         {
-            try {
+            try
+            {
                 await block().ConfigureAwait(false);
-            } catch (Exception ex) {
-                switch (level) {
-                case LogLevel.Debug:
-                    This.DebugException(message ?? "", ex);
-                    break;
-                case LogLevel.Info:
-                    This.InfoException(message ?? "", ex);
-                    break;
-                case LogLevel.Warn:
-                    This.WarnException(message ?? "", ex);
-                    break;
-                case LogLevel.Error:
-                    This.ErrorException(message ?? "", ex);
-                    break;
+            }
+            catch (Exception ex)
+            {
+                switch (level)
+                {
+                    case LogLevel.Debug:
+                        This.DebugException(message ?? "", ex);
+                        break;
+                    case LogLevel.Info:
+                        This.InfoException(message ?? "", ex);
+                        break;
+                    case LogLevel.Warn:
+                        This.WarnException(message ?? "", ex);
+                        break;
+                    case LogLevel.Error:
+                        This.ErrorException(message ?? "", ex);
+                        break;
                 }
                 throw;
             }
@@ -682,22 +778,26 @@ namespace Squirrel
 
         public static async Task<T> LogIfThrows<T>(this IFullLogger This, LogLevel level, string message, Func<Task<T>> block)
         {
-            try {
+            try
+            {
                 return await block().ConfigureAwait(false);
-            } catch (Exception ex) {
-                switch (level) {
-                case LogLevel.Debug:
-                    This.DebugException(message ?? "", ex);
-                    break;
-                case LogLevel.Info:
-                    This.InfoException(message ?? "", ex);
-                    break;
-                case LogLevel.Warn:
-                    This.WarnException(message ?? "", ex);
-                    break;
-                case LogLevel.Error:
-                    This.ErrorException(message ?? "", ex);
-                    break;
+            }
+            catch (Exception ex)
+            {
+                switch (level)
+                {
+                    case LogLevel.Debug:
+                        This.DebugException(message ?? "", ex);
+                        break;
+                    case LogLevel.Info:
+                        This.InfoException(message ?? "", ex);
+                        break;
+                    case LogLevel.Warn:
+                        This.WarnException(message ?? "", ex);
+                        break;
+                    case LogLevel.Error:
+                        This.ErrorException(message ?? "", ex);
+                        break;
                 }
                 throw;
             }
@@ -803,7 +903,8 @@ namespace Squirrel
             // comput the hash of the name space ID concatenated with the 
             // name (step 4)
             byte[] hash;
-            using (var algorithm = SHA1.Create()) {
+            using (var algorithm = SHA1.Create())
+            {
                 algorithm.TransformBlock(namespaceBytes, 0, namespaceBytes.Length, null, 0);
                 algorithm.TransformFinalBlock(nameBytes, 0, nameBytes.Length);
                 hash = algorithm.Hash;
@@ -817,12 +918,12 @@ namespace Squirrel
             // set the four most significant bits (bits 12 through 15) of 
             // the time_hi_and_version field to the appropriate 4-bit 
             // version number from Section 4.1.3 (step 8)
-            newGuid[6] = (byte) ((newGuid[6] & 0x0F) | (5 << 4));
+            newGuid[6] = (byte)((newGuid[6] & 0x0F) | (5 << 4));
 
             // set the two most significant bits (bits 6 and 7) of the 
             // clock_seq_hi_and_reserved to zero and one, respectively 
             // (step 10)
-            newGuid[8] = (byte) ((newGuid[8] & 0x3F) | 0x80);
+            newGuid[8] = (byte)((newGuid[8] & 0x3F) | 0x80);
 
             // convert the resulting UUID to local byte order (step 13)
             SwapByteOrder(newGuid);
@@ -901,7 +1002,8 @@ namespace Squirrel
         {
             var pids = new int[2048];
             var gch = GCHandle.Alloc(pids, GCHandleType.Pinned);
-            try {
+            try
+            {
                 if (!NativeMethods.EnumProcesses(gch.AddrOfPinnedObject(), sizeof(int) * pids.Length, out var bytesReturned))
                     throw new Win32Exception("Failed to enumerate processes");
 
@@ -910,9 +1012,11 @@ namespace Squirrel
 
                 List<ProcessInfo> ret = new();
 
-                for (int i = 0; i < bytesReturned / sizeof(int); i++) {
+                for (int i = 0; i < bytesReturned / sizeof(int); i++)
+                {
                     IntPtr hProcess = IntPtr.Zero;
-                    try {
+                    try
+                    {
                         hProcess = NativeMethods.OpenProcess(ProcessAccess.QueryLimitedInformation, false, pids[i]);
                         if (hProcess == IntPtr.Zero)
                             continue;
@@ -927,15 +1031,21 @@ namespace Squirrel
                             continue;
 
                         ret.Add(new ProcessInfo(sb.ToString(), pids[i]));
-                    } catch (Exception) {
+                    }
+                    catch (Exception)
+                    {
                         // don't care
-                    } finally {
+                    }
+                    finally
+                    {
                         if (hProcess != IntPtr.Zero)
                             NativeMethods.CloseHandle(hProcess);
                     }
                 }
                 return ret;
-            } finally {
+            }
+            finally
+            {
                 gch.Free();
             }
         }

@@ -185,9 +185,12 @@ namespace Squirrel
         public SemanticVersion CurrentlyInstalledVersion(string executable = null)
         {
             string appDir;
-            try {
+            try
+            {
                 appDir = AppDirectory;
-            } catch (InvalidOperationException) {
+            }
+            catch (InvalidOperationException)
+            {
                 // app is not installed, see getUpdateExe()
                 return null;
             }
@@ -217,7 +220,8 @@ namespace Squirrel
         /// <inheritdoc/>
         public void SetProcessAppUserModelId()
         {
-            if (_applicationIdOverride == null && !IsInstalledApp) {
+            if (_applicationIdOverride == null && !IsInstalledApp)
+            {
                 // can't set model id if we don't know the package id.
                 return;
             }
@@ -225,9 +229,12 @@ namespace Squirrel
             var exeName = Path.GetFileName(SquirrelRuntimeInfo.EntryExePath);
 
             string appUserModelId;
-            if (_applicationIdOverride != null) {
+            if (_applicationIdOverride != null)
+            {
                 appUserModelId = Utility.GetAppUserModelId(_applicationIdOverride, exeName);
-            } else {
+            }
+            else
+            {
                 var releases = Utility.LoadLocalReleases(Utility.LocalReleaseFileForAppDir(AppDirectory));
                 var thisRelease = Utility.FindCurrentVersion(releases);
 
@@ -251,9 +258,11 @@ namespace Squirrel
         /// <inheritdoc/>
         public void Dispose()
         {
-            lock (_lockobj) {
+            lock (_lockobj)
+            {
                 var disp = Interlocked.Exchange(ref _updateLock, null);
-                if (disp != null) {
+                if (disp != null)
+                {
                     disp.Dispose();
                 }
                 _disposed = true;
@@ -339,13 +348,15 @@ namespace Squirrel
         private static string GetLocalAppDataDirectory(string assemblyLocation = null)
         {
             // if we're installed and running as update.exe in the app folder, the app directory root is one folder up
-            if (SquirrelRuntimeInfo.IsSingleFile && Path.GetFileName(SquirrelRuntimeInfo.EntryExePath).Equals("Update.exe", StringComparison.OrdinalIgnoreCase)) {
+            if (SquirrelRuntimeInfo.IsSingleFile && Path.GetFileName(SquirrelRuntimeInfo.EntryExePath).Equals("Update.exe", StringComparison.OrdinalIgnoreCase))
+            {
                 var oneFolderUpFromAppFolder = Path.Combine(Path.GetDirectoryName(SquirrelRuntimeInfo.EntryExePath), "..");
                 return Path.GetFullPath(oneFolderUpFromAppFolder);
             }
 
             // if update exists above us, we're running from within a version directory, and the appdata folder is two above us
-            if (File.Exists(Path.Combine(SquirrelRuntimeInfo.BaseDirectory, "..", "Update.exe"))) {
+            if (File.Exists(Path.Combine(SquirrelRuntimeInfo.BaseDirectory, "..", "Update.exe")))
+            {
                 var twoFoldersUpFromAppFolder = Path.Combine(Path.GetDirectoryName(SquirrelRuntimeInfo.EntryExePath), "..\\..");
                 return Path.GetFullPath(twoFoldersUpFromAppFolder);
             }
@@ -356,36 +367,46 @@ namespace Squirrel
 
         private static IUpdateSource CreateSource(string urlOrPath, IFileDownloader urlDownloader)
         {
-            if (String.IsNullOrWhiteSpace(urlOrPath)) {
+            if (String.IsNullOrWhiteSpace(urlOrPath))
+            {
                 return null;
             }
 
-            if (Utility.IsHttpUrl(urlOrPath)) {
+            if (Utility.IsHttpUrl(urlOrPath))
+            {
                 return new SimpleWebSource(urlOrPath, urlDownloader ?? Utility.CreateDefaultDownloader());
-            } else {
+            }
+            else
+            {
                 return new SimpleFileSource(new DirectoryInfo(urlOrPath));
             }
         }
 
         private Task<IDisposable> acquireUpdateLock()
         {
-            lock (_lockobj) {
+            lock (_lockobj)
+            {
                 if (_disposed) throw new ObjectDisposedException(nameof(UpdateManager));
                 if (_updateLock != null) return Task.FromResult(_updateLock);
             }
 
-            return Task.Run(() => {
+            return Task.Run(() =>
+            {
                 var key = Utility.CalculateStreamSHA1(new MemoryStream(Encoding.UTF8.GetBytes(AppDirectory)));
 
                 IDisposable theLock;
-                try {
+                try
+                {
                     theLock = ModeDetector.InUnitTestRunner() ?
                         Disposable.Create(() => { }) : new SingleGlobalInstance(key, TimeSpan.FromMilliseconds(2000));
-                } catch (TimeoutException) {
+                }
+                catch (TimeoutException)
+                {
                     throw new TimeoutException("Couldn't acquire update lock, another instance may be running updates");
                 }
 
-                var ret = Disposable.Create(() => {
+                var ret = Disposable.Create(() =>
+                {
                     theLock.Dispose();
                     _updateLock = null;
                 });
@@ -404,7 +425,7 @@ namespace Squirrel
         /// <param name="stepStartPercentage">The start percentage of the range the current step represents.</param>
         /// <param name="stepEndPercentage">The end percentage of the range the current step represents.</param>
         /// <returns>The calculated percentage that can be reported about the total progress.</returns>
-        internal static int CalculateProgress(int percentageOfCurrentStep, int stepStartPercentage, int stepEndPercentage)
+        public static int CalculateProgress(int percentageOfCurrentStep, int stepStartPercentage, int stepEndPercentage)
         {
             // Ensure we are between 0 and 100
             percentageOfCurrentStep = Math.Max(Math.Min(percentageOfCurrentStep, 100), 0);
@@ -413,7 +434,7 @@ namespace Squirrel
             var singleValue = range / 100d;
             var totalPercentage = (singleValue * percentageOfCurrentStep) + stepStartPercentage;
 
-            return (int) totalPercentage;
+            return (int)totalPercentage;
         }
 
         private static string getInstalledApplicationName()
@@ -424,10 +445,13 @@ namespace Squirrel
 
         private static bool isUpdateExeAvailable()
         {
-            try {
+            try
+            {
                 getUpdateExe();
                 return true;
-            } catch {
+            }
+            catch
+            {
                 return false;
             }
         }
@@ -440,7 +464,8 @@ namespace Squirrel
             if (ourPath != null &&
                 Path.GetFileName(ourPath).Equals("update.exe", StringComparison.OrdinalIgnoreCase) &&
                 ourPath.IndexOf("app-", StringComparison.OrdinalIgnoreCase) == -1 &&
-                ourPath.IndexOf("SquirrelTemp", StringComparison.OrdinalIgnoreCase) == -1) {
+                ourPath.IndexOf("SquirrelTemp", StringComparison.OrdinalIgnoreCase) == -1)
+            {
                 return Path.GetFullPath(ourPath);
             }
 

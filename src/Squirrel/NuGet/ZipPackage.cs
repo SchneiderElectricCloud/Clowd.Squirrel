@@ -9,7 +9,7 @@ using System.Xml.Linq;
 
 namespace Squirrel.NuGet
 {
-    internal interface IPackage
+    public interface IPackage
     {
         string Id { get; }
         string ProductName { get; }
@@ -30,7 +30,7 @@ namespace Squirrel.NuGet
         RuntimeCpu MachineArchitecture { get; }
     }
 
-    internal class ZipPackage : IPackage
+    public class ZipPackage : IPackage
     {
         public string ProductName => Title ?? Id;
         public string ProductDescription => Description ?? Summary ?? Title ?? Id;
@@ -114,12 +114,14 @@ namespace Squirrel.NuGet
                 document = NugetUtil.LoadSafe(fs, ignoreWhiteSpace: true);
 
             var metadataElement = document.Root.ElementsNoNamespace("metadata").FirstOrDefault();
-            if (metadataElement == null) {
+            if (metadataElement == null)
+            {
                 throw new InvalidDataException(
                     String.Format(CultureInfo.CurrentCulture, "Manifest_RequiredElementMissing", "metadata"));
             }
 
-            foreach (var el in toSet) {
+            foreach (var el in toSet)
+            {
                 var elName = XName.Get(el.Key, document.Root.GetDefaultNamespace().NamespaceName);
                 metadataElement.SetElementValue(elName, el.Value);
             }
@@ -163,7 +165,8 @@ namespace Squirrel.NuGet
             var document = NugetUtil.LoadSafe(manifestStream, ignoreWhiteSpace: true);
 
             var metadataElement = document.Root.ElementsNoNamespace("metadata").FirstOrDefault();
-            if (metadataElement == null) {
+            if (metadataElement == null)
+            {
                 throw new InvalidDataException(
                     String.Format(CultureInfo.CurrentCulture, "Manifest_RequiredElementMissing", "metadata"));
             }
@@ -171,9 +174,11 @@ namespace Squirrel.NuGet
             var allElements = new HashSet<string>();
 
             XNode node = metadataElement.FirstNode;
-            while (node != null) {
+            while (node != null)
+            {
                 var element = node as XElement;
-                if (element != null) {
+                if (element != null)
+                {
                     ReadMetadataValue(element, allElements);
                 }
                 node = node.NextNode;
@@ -182,7 +187,8 @@ namespace Squirrel.NuGet
 
         private void ReadMetadataValue(XElement element, HashSet<string> allElements)
         {
-            if (element.Value == null) {
+            if (element.Value == null)
+            {
                 return;
             }
 
@@ -195,70 +201,73 @@ namespace Squirrel.NuGet
             }
 
             string value = element.Value.SafeTrim();
-            switch (element.Name.LocalName) {
-            case "id":
-                Id = value;
-                break;
-            case "version":
-                Version = new SemanticVersion(value);
-                break;
-            case "authors":
-                Authors = getCommaDelimitedValue(value);
-                break;
-            case "owners":
-                Owners = value;
-                break;
-            case "projectUrl":
-                ProjectUrl = new Uri(value);
-                break;
-            case "iconUrl":
-                IconUrl = new Uri(value);
-                break;
-            case "description":
-                Description = value;
-                break;
-            case "summary":
-                Summary = value;
-                break;
-            case "releaseNotes":
-                ReleaseNotes = value;
-                break;
-            case "copyright":
-                Copyright = value;
-                break;
-            case "language":
-                Language = value;
-                break;
-            case "title":
-                Title = value;
-                break;
-            case "tags":
-                Tags = getCommaDelimitedValue(value);
-                break;
-            case "dependencies":
-                DependencySets = ReadDependencySets(element);
-                break;
-            case "frameworkAssemblies":
-                FrameworkAssemblies = ReadFrameworkAssemblies(element);
-                break;
+            switch (element.Name.LocalName)
+            {
+                case "id":
+                    Id = value;
+                    break;
+                case "version":
+                    Version = new SemanticVersion(value);
+                    break;
+                case "authors":
+                    Authors = getCommaDelimitedValue(value);
+                    break;
+                case "owners":
+                    Owners = value;
+                    break;
+                case "projectUrl":
+                    ProjectUrl = new Uri(value);
+                    break;
+                case "iconUrl":
+                    IconUrl = new Uri(value);
+                    break;
+                case "description":
+                    Description = value;
+                    break;
+                case "summary":
+                    Summary = value;
+                    break;
+                case "releaseNotes":
+                    ReleaseNotes = value;
+                    break;
+                case "copyright":
+                    Copyright = value;
+                    break;
+                case "language":
+                    Language = value;
+                    break;
+                case "title":
+                    Title = value;
+                    break;
+                case "tags":
+                    Tags = getCommaDelimitedValue(value);
+                    break;
+                case "dependencies":
+                    DependencySets = ReadDependencySets(element);
+                    break;
+                case "frameworkAssemblies":
+                    FrameworkAssemblies = ReadFrameworkAssemblies(element);
+                    break;
 
-            // ===
-            // the following metadata elements are added by squirrel and are not
-            // used by nuget.
-            case "machineArchitecture":
-                if (Enum.TryParse(value, true, out RuntimeCpu ma)) {
-                    MachineArchitecture = ma;
-                }
-                break;
-            case "runtimeDependencies":
-                RuntimeDependencies = getCommaDelimitedValue(value);
-                break;
+                // ===
+                // the following metadata elements are added by squirrel and are not
+                // used by nuget.
+                case "machineArchitecture":
+                    if (Enum.TryParse(value, true, out RuntimeCpu ma))
+                    {
+                        MachineArchitecture = ma;
+                    }
+                    break;
+                case "runtimeDependencies":
+                    RuntimeDependencies = getCommaDelimitedValue(value);
+                    break;
             }
         }
 
         private List<FrameworkAssemblyReference> ReadFrameworkAssemblies(XElement frameworkElement)
         {
-            if (!frameworkElement.HasElements) {
+            if (!frameworkElement.HasElements)
+            {
                 return new List<FrameworkAssemblyReference>(0);
             }
 
@@ -273,23 +282,28 @@ namespace Squirrel.NuGet
 
         private List<PackageDependencySet> ReadDependencySets(XElement dependenciesElement)
         {
-            if (!dependenciesElement.HasElements) {
+            if (!dependenciesElement.HasElements)
+            {
                 return new List<PackageDependencySet>();
             }
 
             // Disallow the <dependencies> element to contain both <dependency> and 
             // <group> child elements. Unfortunately, this cannot be enforced by XSD.
             if (dependenciesElement.ElementsNoNamespace("dependency").Any() &&
-                dependenciesElement.ElementsNoNamespace("group").Any()) {
+                dependenciesElement.ElementsNoNamespace("group").Any())
+            {
                 throw new InvalidDataException("Manifest_DependenciesHasMixedElements");
             }
 
             var dependencies = ReadDependencies(dependenciesElement);
-            if (dependencies.Count > 0) {
+            if (dependencies.Count > 0)
+            {
                 // old format, <dependency> is direct child of <dependencies>
                 var dependencySet = new PackageDependencySet(null, dependencies);
                 return new List<PackageDependencySet> { dependencySet };
-            } else {
+            }
+            else
+            {
                 var groups = dependenciesElement.ElementsNoNamespace("group");
                 return (from element in groups
                         let fx = ParseFrameworkNames(element.GetOptionalAttributeValue("targetFramework").SafeTrim())
@@ -313,7 +327,8 @@ namespace Squirrel.NuGet
 
         private IEnumerable<string> ParseFrameworkNames(string frameworkNames)
         {
-            if (String.IsNullOrEmpty(frameworkNames)) {
+            if (String.IsNullOrEmpty(frameworkNames))
+            {
                 return Enumerable.Empty<string>();
             }
 

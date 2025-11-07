@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Squirrel
 {
-    internal static class Disposable
+    public static class Disposable
     {
         public static IDisposable Create(Action action)
         {

@@ -7,7 +7,7 @@ using System.Xml.Linq;
 
 namespace Squirrel.NuGet
 {
-    internal static class NugetUtil
+    public static class NugetUtil
     {
         public static readonly string PackageExtension = ".nupkg";
         public static readonly string ManifestExtension = ".nuspec";
@@ -28,11 +28,15 @@ namespace Squirrel.NuGet
 
         public static void ThrowIfVersionNotSemverCompliant(string version)
         {
-            if (SemanticVersion.TryParseStrict(version, out var parsed)) {
-                if (parsed < new SemanticVersion(0, 0, 1, 0)) {
+            if (SemanticVersion.TryParseStrict(version, out var parsed))
+            {
+                if (parsed < new SemanticVersion(0, 0, 1, 0))
+                {
                     throw new Exception($"Invalid package version '{version}', it must be >= 0.0.1.");
                 }
-            } else {
+            }
+            else
+            {
                 throw new Exception($"Invalid package version '{version}', it must be a 3-part SemVer compliant version string.");
             }
         }
@@ -45,9 +49,12 @@ namespace Squirrel.NuGet
         public static string GetOptionalAttributeValue(this XElement element, string localName, string namespaceName = null)
         {
             XAttribute attr;
-            if (String.IsNullOrEmpty(namespaceName)) {
+            if (String.IsNullOrEmpty(namespaceName))
+            {
                 attr = element.Attribute(localName);
-            } else {
+            }
+            else
+            {
                 attr = element.Attribute(XName.Get(localName, namespaceName));
             }
             return attr != null ? attr.Value : null;
@@ -56,9 +63,12 @@ namespace Squirrel.NuGet
         public static string GetOptionalElementValue(this XContainer element, string localName, string namespaceName = null)
         {
             XElement child;
-            if (String.IsNullOrEmpty(namespaceName)) {
+            if (String.IsNullOrEmpty(namespaceName))
+            {
                 child = element.ElementsNoNamespace(localName).FirstOrDefault();
-            } else {
+            }
+            else
+            {
                 child = element.Element(XName.Get(localName, namespaceName));
             }
             return child != null ? child.Value : null;
@@ -80,7 +90,8 @@ namespace Squirrel.NuGet
         internal static string GetPath(Uri uri)
         {
             string path = uri.OriginalString;
-            if (path.StartsWith("/", StringComparison.Ordinal)) {
+            if (path.StartsWith("/", StringComparison.Ordinal))
+            {
                 path = path.Substring(1);
             }
 
@@ -103,12 +114,14 @@ namespace Squirrel.NuGet
 
             effectivePath = path;
 
-            if (String.IsNullOrEmpty(targetFrameworkString)) {
+            if (String.IsNullOrEmpty(targetFrameworkString))
+            {
                 return null;
             }
 
             var targetFramework = targetFrameworkString;
-            if (strictParsing) {
+            if (strictParsing)
+            {
                 // skip past the framework folder and the character \
                 effectivePath = path.Substring(targetFrameworkString.Length + 1);
                 return targetFramework;
@@ -128,18 +141,23 @@ namespace Squirrel.NuGet
                 NugetUtil.BuildDirectory
             };
 
-            for (int i = 0; i < knownFolders.Length; i++) {
+            for (int i = 0; i < knownFolders.Length; i++)
+            {
                 string folderPrefix = knownFolders[i] + System.IO.Path.DirectorySeparatorChar;
                 if (filePath.Length > folderPrefix.Length &&
-                    filePath.StartsWith(folderPrefix, StringComparison.OrdinalIgnoreCase)) {
+                    filePath.StartsWith(folderPrefix, StringComparison.OrdinalIgnoreCase))
+                {
                     string frameworkPart = filePath.Substring(folderPrefix.Length);
 
-                    try {
+                    try
+                    {
                         return ParseFrameworkFolderName(
                             frameworkPart,
                             strictParsing: knownFolders[i] == NugetUtil.LibDirectory,
                             effectivePath: out effectivePath);
-                    } catch (ArgumentException) {
+                    }
+                    catch (ArgumentException)
+                    {
                         // if the parsing fails, we treat it as if this file
                         // doesn't have target framework.
                         effectivePath = frameworkPart;
@@ -162,7 +180,8 @@ namespace Squirrel.NuGet
 
         private static XmlReaderSettings CreateSafeSettings(bool ignoreWhiteSpace = false)
         {
-            var safeSettings = new XmlReaderSettings {
+            var safeSettings = new XmlReaderSettings
+            {
                 XmlResolver = null,
                 DtdProcessing = DtdProcessing.Prohibit,
                 IgnoreWhitespace = ignoreWhiteSpace

@@ -16,16 +16,19 @@ namespace Squirrel.NuGet
         //Stream GetEntryStream(Stream archiveStream);
     }
 
-    internal class ZipPackageFile : IPackageFile, IEquatable<ZipPackageFile>
+    public class ZipPackageFile : IPackageFile, IEquatable<ZipPackageFile>
     {
         public Uri Key { get; }
         public string EffectivePath { get; }
         public string TargetFramework { get; }
         public string Path { get; }
 
-        IEnumerable<string> IFrameworkTargetable.SupportedFrameworks {
-            get {
-                if (TargetFramework != null) {
+        IEnumerable<string> IFrameworkTargetable.SupportedFrameworks
+        {
+            get
+            {
+                if (TargetFramework != null)
+                {
                     yield return TargetFramework;
                 }
                 yield break;

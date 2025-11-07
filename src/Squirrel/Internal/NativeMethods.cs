@@ -8,27 +8,31 @@ namespace Squirrel
 #if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 #endif
-    internal static class NativeMethods
+    public static class NativeMethods
     {
         public static int GetParentProcessId()
         {
             var pbi = new PROCESS_BASIC_INFORMATION();
 
             //Get a handle to our own process
-            IntPtr hProc = OpenProcess((ProcessAccess) 0x001F0FFF, false, Process.GetCurrentProcess().Id);
+            IntPtr hProc = OpenProcess((ProcessAccess)0x001F0FFF, false, Process.GetCurrentProcess().Id);
 
-            try {
+            try
+            {
                 int sizeInfoReturned;
-                int queryStatus = NtQueryInformationProcess(hProc, (PROCESSINFOCLASS) 0, ref pbi, pbi.Size, out sizeInfoReturned);
-            } finally {
-                if (!hProc.Equals(IntPtr.Zero)) {
+                int queryStatus = NtQueryInformationProcess(hProc, (PROCESSINFOCLASS)0, ref pbi, pbi.Size, out sizeInfoReturned);
+            }
+            finally
+            {
+                if (!hProc.Equals(IntPtr.Zero))
+                {
                     //Close handle and free allocated memory
                     CloseHandle(hProc);
                     hProc = IntPtr.Zero;
                 }
             }
 
-            return (int) pbi.InheritedFromUniqueProcessId;
+            return (int)pbi.InheritedFromUniqueProcessId;
         }
 
         [DllImport("shell32.dll", SetLastError = true)]
@@ -69,71 +73,71 @@ namespace Squirrel
 
         [DllImport("version.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetFileVersionInfo(
+        public static extern bool GetFileVersionInfo(
             string lpszFileName,
             int dwHandleIgnored,
             int dwLen,
             [MarshalAs(UnmanagedType.LPArray)] byte[] lpData);
 
         [DllImport("version.dll", SetLastError = true)]
-        internal static extern int GetFileVersionInfoSize(
+        public static extern int GetFileVersionInfoSize(
             string lpszFileName,
             IntPtr dwHandleIgnored);
 
         [DllImport("version.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool VerQueryValue(
+        public static extern bool VerQueryValue(
             byte[] pBlock,
             string pSubBlock,
             out IntPtr pValue,
             out int len);
 
         [DllImport("psapi.dll", SetLastError = true)]
-        internal static extern bool EnumProcesses(
+        public static extern bool EnumProcesses(
             IntPtr pProcessIds, // pointer to allocated DWORD array
             int cb,
             out int pBytesReturned);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool QueryFullProcessImageName(
+        public static extern bool QueryFullProcessImageName(
             IntPtr hProcess,
             [In] int justPassZeroHere,
             [Out] StringBuilder lpImageFileName,
             [In][MarshalAs(UnmanagedType.U4)] ref int nSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern IntPtr OpenProcess(
+        public static extern IntPtr OpenProcess(
             ProcessAccess processAccess,
             bool bInheritHandle,
             int processId);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool CloseHandle(IntPtr hHandle);
+        public static extern bool CloseHandle(IntPtr hHandle);
 
         [DllImport("NTDLL.DLL", SetLastError = true)]
-        internal static extern int NtQueryInformationProcess(IntPtr hProcess, PROCESSINFOCLASS pic, ref PROCESS_BASIC_INFORMATION pbi, int cb, out int pSize);
+        public static extern int NtQueryInformationProcess(IntPtr hProcess, PROCESSINFOCLASS pic, ref PROCESS_BASIC_INFORMATION pbi, int cb, out int pSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
+        public static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
 
         [DllImport("kernel32.dll", EntryPoint = "GetStdHandle")]
-        internal static extern IntPtr GetStdHandle(StandardHandles nStdHandle);
+        public static extern IntPtr GetStdHandle(StandardHandles nStdHandle);
 
         [DllImport("kernel32.dll", EntryPoint = "AllocConsole")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool AllocConsole();
+        public static extern bool AllocConsole();
 
         [DllImport("kernel32.dll")]
-        internal static extern bool AttachConsole(int pid);
+        public static extern bool AttachConsole(int pid);
 
         [DllImport("Kernel32.dll", SetLastError = true)]
-        internal static extern IntPtr BeginUpdateResource(string pFileName, bool bDeleteExistingResources);
+        public static extern IntPtr BeginUpdateResource(string pFileName, bool bDeleteExistingResources);
 
         [DllImport("Kernel32.dll", SetLastError = true)]
-        internal static extern bool UpdateResource(IntPtr handle, string pType, IntPtr pName, short language, [MarshalAs(UnmanagedType.LPArray)] byte[] pData, int dwSize);
+        public static extern bool UpdateResource(IntPtr handle, string pType, IntPtr pName, short language, [MarshalAs(UnmanagedType.LPArray)] byte[] pData, int dwSize);
 
         [DllImport("Kernel32.dll", SetLastError = true)]
-        internal static extern bool EndUpdateResource(IntPtr handle, bool discard);
+        public static extern bool EndUpdateResource(IntPtr handle, bool discard);
 
 #nullable enable
         /// <summary>
@@ -151,7 +155,7 @@ namespace Squirrel
         /// </remarks>
         [DllImport("msdelta.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool ApplyDelta(
+        public static extern bool ApplyDelta(
             [MarshalAs(UnmanagedType.I8)] ApplyFlags applyFlags,
             string sourceName,
             string deltaName,
@@ -179,7 +183,7 @@ namespace Squirrel
         /// </remarks>
         [DllImport("msdelta.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool CreateDelta(
+        public static extern bool CreateDelta(
             [MarshalAs(UnmanagedType.I8)] FileTypeSet fileTypeSet,
             [MarshalAs(UnmanagedType.I8)] CreateFlags setFlags,
             [MarshalAs(UnmanagedType.I8)] CreateFlags resetFlags,
@@ -195,7 +199,7 @@ namespace Squirrel
     }
 
     [Flags]
-    internal enum ProcessAccess : uint
+    public enum ProcessAccess : uint
     {
         All = 0x001F0FFF,
         Terminate = 0x00000001,
@@ -212,7 +216,7 @@ namespace Squirrel
         Synchronize = 0x00100000
     }
 
-    internal enum PROCESSINFOCLASS : int
+    public enum PROCESSINFOCLASS : int
     {
         ProcessBasicInformation = 0, // 0, q: PROCESS_BASIC_INFORMATION, PROCESS_EXTENDED_BASIC_INFORMATION
         ProcessQuotaLimits, // qs: QUOTA_LIMITS, QUOTA_LIMITS_EX
@@ -275,7 +279,7 @@ namespace Squirrel
     };
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    internal struct PROCESS_BASIC_INFORMATION
+    public struct PROCESS_BASIC_INFORMATION
     {
         public IntPtr ExitStatus;
         public IntPtr PebBaseAddress;
@@ -284,12 +288,13 @@ namespace Squirrel
         public UIntPtr UniqueProcessId;
         public IntPtr InheritedFromUniqueProcessId;
 
-        public int Size {
-            get { return (int) Marshal.SizeOf(typeof(PROCESS_BASIC_INFORMATION)); }
+        public int Size
+        {
+            get { return (int)Marshal.SizeOf(typeof(PROCESS_BASIC_INFORMATION)); }
         }
     }
 
-    internal enum StandardHandles : int
+    public enum StandardHandles : int
     {
         STD_INPUT_HANDLE = -10,
         STD_OUTPUT_HANDLE = -11,
@@ -299,7 +304,7 @@ namespace Squirrel
     /// <remarks>
     ///     http://msdn.microsoft.com/en-us/library/bb417345.aspx#deltaflagtypeflags
     /// </remarks>
-    internal enum ApplyFlags : long
+    public enum ApplyFlags : long
     {
         /// <summary>Indicates no special handling.</summary>
         None = 0,
@@ -312,7 +317,7 @@ namespace Squirrel
     ///     http://msdn.microsoft.com/en-us/library/bb417345.aspx#filetypesets
     /// </remarks>
     [Flags]
-    internal enum FileTypeSet : long
+    public enum FileTypeSet : long
     {
         /// <summary>
         ///     File type set that includes I386, IA64 and AMD64 Portable Executable (PE) files. Others are treated as raw.
@@ -323,7 +328,7 @@ namespace Squirrel
     /// <remarks>
     ///     http://msdn.microsoft.com/en-us/library/bb417345.aspx#deltaflagtypeflags
     /// </remarks>
-    internal enum CreateFlags : long
+    public enum CreateFlags : long
     {
         /// <summary>Indicates no special handling.</summary>
         None = 0,
@@ -336,7 +341,7 @@ namespace Squirrel
     ///     http://msdn.microsoft.com/en-us/library/bb417345.aspx#deltainputstructure
     /// </remarks>
     [StructLayout(LayoutKind.Sequential)]
-    internal struct DeltaInput
+    public struct DeltaInput
     {
         /// <summary>Memory address non-editable input buffer.</summary>
         public IntPtr Start;
@@ -351,7 +356,7 @@ namespace Squirrel
         [MarshalAs(UnmanagedType.Bool)] public bool Editable;
     }
 
-    internal enum HashAlgId
+    public enum HashAlgId
     {
         /// <summary>No signature.</summary>
         None = 0,
