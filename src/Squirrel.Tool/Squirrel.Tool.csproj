@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <IsPackable>true</IsPackable>
     <AssemblyName>csq</AssemblyName>
     <PackageId>csq</PackageId>
@@ -14,7 +14,7 @@
     <Description>A .NET Core Tool that uses the Squirrel framework to create installers and update packages for dotnet applications.</Description>
     <PackageIcon>Clowd_200.png</PackageIcon>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <None Include="..\..\docs\artwork\Clowd_200.png" Pack="true" PackagePath="\" />
     <Compile Include="..\Squirrel.CommandLine\ConsoleLogger.cs" />
