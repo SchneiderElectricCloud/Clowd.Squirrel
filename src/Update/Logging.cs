@@ -19,23 +19,25 @@ namespace Squirrel.Update
                    SquirrelRuntimeInfo.BaseDirectory;
 
             string name, archivename;
-            if (saveInTemp || action == UpdateAction.Unset) {
+            if (saveInTemp || action == UpdateAction.Unset)
+            {
                 name = "Squirrel.log";
                 archivename = "Squirrel.archive{###}.log";
-            } else {
+            }
+            else
+            {
                 name = $"Squirrel-{action}.log";
                 archivename = $"Squirrel-{action}.archive{{###}}.log";
             }
 
             // https://gist.github.com/chrisortman/1092889
             SimpleConfigurator.ConfigureForTargetLogging(
-                new FileTarget() {
+                new FileTarget()
+                {
                     FileName = Path.Combine(dir, name),
                     Layout = new NLog.Layouts.SimpleLayout("${longdate} [${level:uppercase=true}] - ${message}"),
                     ArchiveFileName = Path.Combine(dir, archivename),
                     ArchiveAboveSize = 2_000_000 /* 2 MB */,
-                    ArchiveNumbering = ArchiveNumberingMode.Sequence,
-                    ConcurrentWrites = true, // should allow multiple processes to use the same file
                     KeepFileOpen = true,
                     MaxArchiveFiles = 2 /* MAX 6mb of log data per "action" */,
                 },
@@ -47,29 +49,31 @@ namespace Squirrel.Update
 
         public void Write(string message, LogLevel logLevel)
         {
-            if (logLevel < Level) {
+            if (logLevel < Level)
+            {
                 return;
             }
 
-            switch (logLevel) {
-            case LogLevel.Debug:
-                _log.Debug(message);
-                break;
-            case LogLevel.Info:
-                _log.Info(message);
-                break;
-            case LogLevel.Warn:
-                _log.Warn(message);
-                break;
-            case LogLevel.Error:
-                _log.Error(message);
-                break;
-            case LogLevel.Fatal:
-                _log.Fatal(message);
-                break;
-            default:
-                _log.Info(message);
-                break;
+            switch (logLevel)
+            {
+                case LogLevel.Debug:
+                    _log.Debug(message);
+                    break;
+                case LogLevel.Info:
+                    _log.Info(message);
+                    break;
+                case LogLevel.Warn:
+                    _log.Warn(message);
+                    break;
+                case LogLevel.Error:
+                    _log.Error(message);
+                    break;
+                case LogLevel.Fatal:
+                    _log.Fatal(message);
+                    break;
+                default:
+                    _log.Info(message);
+                    break;
             }
         }
     }
