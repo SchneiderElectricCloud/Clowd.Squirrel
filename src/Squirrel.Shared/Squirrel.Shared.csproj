@@ -6,4 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Squirrel\Squirrel.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="Nerdbank.GitVersioning" Version="3.9.50" />
+  </ItemGroup>
 </Project>
