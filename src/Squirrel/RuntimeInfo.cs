@@ -228,6 +228,8 @@ namespace Squirrel
                 if (String.IsNullOrEmpty(baseDir))
                     return null;
 
+                if (!CheckDotNet8Runtime(baseDir)) { return null; }
+
                 return runtimeType switch {
                     DotnetRuntimeType.Runtime => Path.Combine(baseDir, "shared", "Microsoft.NETCore.App"),
                     DotnetRuntimeType.AspNetCore => Path.Combine(baseDir, "shared", "Microsoft.AspNetCore.App"),
@@ -235,6 +237,33 @@ namespace Squirrel
                     _ => throw new ArgumentOutOfRangeException(nameof(DotnetRuntimeType)),
                 };
             }
+
+
+            public static bool CheckDotNet8Runtime(string baseDir)
+            {
+                try {
+                    string netPath = Path.Combine(baseDir, "shared", "Microsoft.NETCore.App");
+                    string versionPrefix = "8.";
+
+                    if (Directory.Exists(netPath)) {
+                        var runtimeDirs = Directory.GetDirectories(netPath)
+                            .Where(dir => Path.GetFileName(dir).StartsWith(versionPrefix));
+
+                        foreach (var dir in runtimeDirs) {
+                            string coreLibPath = Path.Combine(dir, "System.Private.CoreLib.dll");
+                            if (File.Exists(coreLibPath)) {
+                                return true;
+                            }
+                        }
+                    }
+
+                    return false;
+                } catch (Exception ex) {
+                    Log.Error($"Error checking .NET runtime: {ex.Message}");
+                    return false;
+                }
+            }
+
 
             private static string GetDotnetBaseDir(RuntimeCpu runtime)
             {
