@@ -3,6 +3,6 @@
   "version": "1.0",
   "gitCommitIdShortFixedLength": 6,
   "publicReleaseRefSpec": [
-    "^refs/heads/master$"
+    "feature/sebuild"
   ]
 }
