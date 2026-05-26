@@ -228,7 +228,7 @@ namespace Squirrel
                 if (String.IsNullOrEmpty(baseDir))
                     return null;
 
-                if (!CheckDotNet8Runtime(baseDir)) { return null; }
+                if (!CheckDotNet10Runtime(baseDir)) { return null; }
 
                 return runtimeType switch {
                     DotnetRuntimeType.Runtime => Path.Combine(baseDir, "shared", "Microsoft.NETCore.App"),
@@ -239,11 +239,11 @@ namespace Squirrel
             }
 
 
-            public static bool CheckDotNet8Runtime(string baseDir)
+            public static bool CheckDotNet10Runtime(string baseDir)
             {
                 try {
                     string netPath = Path.Combine(baseDir, "shared", "Microsoft.NETCore.App");
-                    string versionPrefix = "8.";
+                    string versionPrefix = "10.";
 
                     if (Directory.Exists(netPath)) {
                         var runtimeDirs = Directory.GetDirectories(netPath)
